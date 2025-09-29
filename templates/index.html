@@ -1,0 +1,24 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Shared Text — Home</title>
+</head>
+<body style="font-family:system-ui, -apple-system, sans-serif;padding:40px;">
+  <h1>Online room test</h1>
+  <form action="/create" method="get" style="margin-bottom:16px;">
+    <button type="submit">Create room</button>
+  </form>
+
+  <form action="/join" method="post">
+    <label>
+      Join room code:
+      <input name="code" placeholder="ABC123" />
+    </label>
+    <button type="submit">Join</button>
+  </form>
+
+  <p style="margin-top:24px;color:#666;">Rooms are temporary and kept in memory. Refreshing the server will clear text.</p>
+</body>
+</html>
