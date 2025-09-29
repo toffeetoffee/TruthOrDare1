@@ -4,10 +4,10 @@ import string, random
 
 app = Flask(__name__)
 app.config['SECRET_KEY'] = 'replace-this-with-a-secret'
-# allow larger socket payloads for pasted images (adjust as needed)
-socketio = SocketIO(app, cors_allowed_origins='*', max_http_buffer_size=10000000)
+socketio = SocketIO(app, cors_allowed_origins='*')
 
-# In-memory store: room_code -> html (contenteditable HTML)
+# In-memory store: room_code -> list of players
+# Each player: {'sid': socket_id, 'name': username}
 rooms = {}
 
 def gen_code(n=6):
@@ -17,47 +17,65 @@ def gen_code(n=6):
 def index():
     return render_template('index.html')
 
-@app.route('/create')
+@app.route('/create', methods=['POST'])
 def create():
+    name = request.form.get('name', '').strip()
+    if not name:
+        return redirect(url_for('index'))
     code = gen_code(6)
-    rooms[code] = ''
-    return redirect(url_for('room', code=code))
+    rooms[code] = []
+    return redirect(url_for('room', code=code, name=name))
 
 @app.route('/join', methods=['POST'])
 def join_post():
     code = request.form.get('code', '').strip().upper()
-    if not code:
+    name = request.form.get('name', '').strip()
+    if not code or not name:
         return redirect(url_for('index'))
-    # Create room if missing (optional)
-    rooms.setdefault(code, '')
-    return redirect(url_for('room', code=code))
+    # Create room if missing
+    rooms.setdefault(code, [])
+    return redirect(url_for('room', code=code, name=name))
 
 @app.route('/room/<code>')
 def room(code):
+    name = request.args.get('name', '')
+    if not name:
+        return redirect(url_for('index'))
     code = code.strip().upper()
-    rooms.setdefault(code, '')
-    return render_template('room.html', code=code)
+    rooms.setdefault(code, [])
+    return render_template('room.html', code=code, name=name)
 
 # --- Socket events ---
 @socketio.on('join')
 def on_join(data):
     room = data.get('room')
+    name = data.get('name', 'Anonymous')
     if not room:
         return
+    
     join_room(room)
-    # send current content (html) to the joining client only
-    emit('init', {'html': rooms.get(room, '')}, to=request.sid)
+    
+    # Add player to room
+    player = {'sid': request.sid, 'name': name}
+    rooms.setdefault(room, [])
+    
+    # Check if player already exists (reconnect), otherwise add
+    existing = [p for p in rooms[room] if p['sid'] == request.sid]
+    if not existing:
+        rooms[room].append(player)
+    
+    # Broadcast updated player list to everyone in room
+    player_names = [p['name'] for p in rooms[room]]
+    emit('player_list', {'players': player_names}, room=room)
 
-@socketio.on('content_change')
-def on_content_change(data):
-    room = data.get('room')
-    html = data.get('html', '')
-    if not room:
-        return
-    rooms[room] = html
-    # broadcast to everyone in room except the sender
-    emit('content_change', {'html': html}, room=room, include_self=False)
+@socketio.on('disconnect')
+def on_disconnect():
+    # Remove player from all rooms
+    for room_code in rooms:
+        rooms[room_code] = [p for p in rooms[room_code] if p['sid'] != request.sid]
+        # Broadcast updated list
+        player_names = [p['name'] for p in rooms[room_code]]
+        emit('player_list', {'players': player_names}, room=room_code)
 
 if __name__ == '__main__':
-    # For local dev: socketio.run(app)
     socketio.run(app, host='0.0.0.0', port=5000)

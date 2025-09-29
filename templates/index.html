@@ -3,22 +3,83 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Shared Text — Home</title>
+  <title>Dare or Dare - Home</title>
+  <style>
+    body {
+      font-family: system-ui, -apple-system, sans-serif;
+      padding: 40px;
+      max-width: 500px;
+      margin: 0 auto;
+    }
+    h1 {
+      text-align: center;
+      color: #333;
+    }
+    form {
+      margin-bottom: 24px;
+      padding: 20px;
+      border: 1px solid #ddd;
+      border-radius: 8px;
+      background: #f9f9f9;
+    }
+    label {
+      display: block;
+      margin-bottom: 8px;
+      font-weight: 500;
+    }
+    input {
+      width: 100%;
+      padding: 8px;
+      margin-bottom: 12px;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+      box-sizing: border-box;
+      font-size: 14px;
+    }
+    button {
+      width: 100%;
+      padding: 10px;
+      background: #007bff;
+      color: white;
+      border: none;
+      border-radius: 4px;
+      font-size: 16px;
+      cursor: pointer;
+    }
+    button:hover {
+      background: #0056b3;
+    }
+    .note {
+      margin-top: 24px;
+      color: #666;
+      font-size: 14px;
+      text-align: center;
+    }
+  </style>
 </head>
-<body style="font-family:system-ui, -apple-system, sans-serif;padding:40px;">
-  <h1>Online room test</h1>
-  <form action="/create" method="get" style="margin-bottom:16px;">
-    <button type="submit">Create room</button>
+<body>
+  <h1>Dare or Dare</h1>
+  
+  <form action="/create" method="post">
+    <label>
+      Your Name:
+      <input name="name" placeholder="Enter your name" required />
+    </label>
+    <button type="submit">Create New Room</button>
   </form>
 
   <form action="/join" method="post">
     <label>
-      Join room code:
-      <input name="code" placeholder="ABC123" />
+      Your Name:
+      <input name="name" placeholder="Enter your name" required />
     </label>
-    <button type="submit">Join</button>
+    <label>
+      Room Code:
+      <input name="code" placeholder="ABC123" required />
+    </label>
+    <button type="submit">Join Room</button>
   </form>
 
-  <p style="margin-top:24px;color:#666;">Rooms are temporary and kept in memory. Refreshing the server will clear text.</p>
+  <p class="note">Rooms are temporary and kept in memory.</p>
 </body>
 </html>
