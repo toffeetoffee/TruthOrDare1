@@ -46,10 +46,59 @@
       border: 1px solid #ddd;
       border-radius: 4px;
     }
+    .player-item.host {
+      background: #e3f2fd;
+      border-color: #2196f3;
+      font-weight: 500;
+    }
+    .host-badge {
+      color: #1976d2;
+      font-size: 12px;
+      margin-left: 8px;
+    }
     .player-count {
       color: #666;
       font-size: 14px;
       margin-top: 8px;
+    }
+    .button-group {
+      margin-top: 24px;
+      display: flex;
+      gap: 12px;
+    }
+    button {
+      flex: 1;
+      padding: 12px;
+      border: none;
+      border-radius: 4px;
+      font-size: 16px;
+      cursor: pointer;
+      transition: opacity 0.2s;
+    }
+    button:hover {
+      opacity: 0.8;
+    }
+    .btn-leave {
+      background: #dc3545;
+      color: white;
+    }
+    .btn-destroy {
+      background: #6c757d;
+      color: white;
+    }
+    .btn-settings {
+      background: #ffc107;
+      color: #000;
+    }
+    .btn-start {
+      background: #28a745;
+      color: white;
+    }
+    .host-controls {
+      display: none;
+    }
+    .host-controls.show {
+      display: block;
     }
   </style>
 </head>
@@ -70,17 +119,36 @@
     <div id="player-count" class="player-count"></div>
   </div>
 
+  <div class="button-group">
+    <button class="btn-leave" onclick="leaveRoom()">Leave Room</button>
+  </div>
+
+  <div id="host-controls" class="host-controls">
+    <div class="button-group">
+      <button class="btn-settings" onclick="openSettings()">Settings</button>
+      <button class="btn-start" onclick="startGame()">Start Game</button>
+    </div>
+    <div class="button-group">
+      <button class="btn-destroy" onclick="destroyRoom()">Destroy Room</button>
+    </div>
+  </div>
+
   <script src="https://cdn.socket.io/4.6.1/socket.io.min.js" crossorigin="anonymous"></script>
   <script>
     const ROOM = '{{ code }}';
     const NAME = '{{ name }}';
     const socket = io();
+    
+    let mySocketId = null;
+    let hostSocketId = null;
 
     const playerList = document.getElementById('player-list');
     const playerCount = document.getElementById('player-count');
+    const hostControls = document.getElementById('host-controls');
 
     // Join the room when connected
     socket.on('connect', () => {
+      mySocketId = socket.id;
       socket.emit('join', { room: ROOM, name: NAME });
     });
 
@@ -92,13 +160,60 @@
         return;
       }
 
+      hostSocketId = data.host_sid;
+
       // Display all players
       playerList.innerHTML = data.players
-        .map(name => `<li class="player-item">${escapeHtml(name)}</li>`)
+        .map((name, index) => {
+          const isHost = (index === 0); // First player is always host in the list
+          const hostBadge = isHost ? '<span class="host-badge">(Host)</span>' : '';
+          const hostClass = isHost ? ' host' : '';
+          return `<li class="player-item${hostClass}">${escapeHtml(name)}${hostBadge}</li>`;
+        })
         .join('');
       
       playerCount.textContent = `${data.players.length} player(s) in room`;
+
+      // Show host controls if this user is the host
+      if (mySocketId === hostSocketId) {
+        hostControls.classList.add('show');
+      } else {
+        hostControls.classList.remove('show');
+      }
     });
+
+    // Room was destroyed
+    socket.on('room_destroyed', () => {
+      alert('The host has closed the room.');
+      window.location.href = '/';
+    });
+
+    // Successfully left room
+    socket.on('left_room', () => {
+      window.location.href = '/';
+    });
+
+    // Functions
+    function leaveRoom() {
+      if (confirm('Are you sure you want to leave the room?')) {
+        socket.emit('leave', { room: ROOM });
+      }
+    }
+
+    function destroyRoom() {
+      if (confirm('Are you sure you want to destroy the room? All players will be kicked.')) {
+        socket.emit('destroy_room', { room: ROOM });
+        window.location.href = '/';
+      }
+    }
+
+    function openSettings() {
+      alert('Settings - Coming soon!');
+    }
+
+    function startGame() {
+      alert('Start Game - Coming soon!');
+    }
 
     // Simple HTML escape function
     function escapeHtml(text) {
