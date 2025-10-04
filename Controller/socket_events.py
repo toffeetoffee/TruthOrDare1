@@ -102,6 +102,56 @@ def register_socket_events(socketio, game_manager):
                         room.game_state.start_selection(duration=10)
                         
                         socketio.emit('game_state_update', room.game_state.to_dict(), room=room_code, namespace='/')
+                        
+                        # Schedule truth/dare phase after selection
+                        def start_truth_dare_phase():
+                            time.sleep(10)
+                            room = game_manager.get_room(room_code)
+                            if room:
+                                # If no choice was made, randomize
+                                if room.game_state.selected_choice is None:
+                                    room.game_state.set_selected_choice(random.choice(['truth', 'dare']))
+                                
+                                # Get the selected player
+                                selected_player = room.get_player_by_name(room.game_state.selected_player)
+                                if selected_player:
+                                    # Pick random truth or dare based on choice
+                                    choice = room.game_state.selected_choice
+                                    if choice == 'truth':
+                                        truths = selected_player.truth_dare_list.truths
+                                        if truths:
+                                            selected_item = random.choice(truths)
+                                            selected_player.truth_dare_list.truths.remove(selected_item)
+                                            room.game_state.set_current_truth_dare(selected_item.to_dict())
+                                    else:  # dare
+                                        dares = selected_player.truth_dare_list.dares
+                                        if dares:
+                                            selected_item = random.choice(dares)
+                                            selected_player.truth_dare_list.dares.remove(selected_item)
+                                            room.game_state.set_current_truth_dare(selected_item.to_dict())
+                                
+                                # Start truth/dare phase
+                                room.game_state.start_truth_dare(duration=60)
+                                socketio.emit('game_state_update', room.game_state.to_dict(), room=room_code, namespace='/')
+                                
+                                # Schedule back to preparation after truth/dare
+                                def back_to_preparation():
+                                    time.sleep(60)
+                                    room = game_manager.get_room(room_code)
+                                    if room:
+                                        room.game_state.start_preparation(duration=30)
+                                        socketio.emit('game_state_update', room.game_state.to_dict(), room=room_code, namespace='/')
+                                        
+                                        # Continue the loop (selection -> truth/dare -> prep -> selection...)
+                                        start_selection()
+                                
+                                prep_thread = threading.Thread(target=back_to_preparation)
+                                prep_thread.daemon = True
+                                prep_thread.start()
+                        
+                        td_thread = threading.Thread(target=start_truth_dare_phase)
+                        td_thread.daemon = True
+                        td_thread.start()
                 
                 selection_thread = threading.Thread(target=start_selection)
                 selection_thread.daemon = True
@@ -110,6 +160,67 @@ def register_socket_events(socketio, game_manager):
         thread = threading.Thread(target=start_preparation)
         thread.daemon = True
         thread.start()
+    
+    @socketio.on('select_truth_dare')
+    def on_select_truth_dare(data):
+        room_code = data.get('room')
+        choice = data.get('choice')  # 'truth' or 'dare'
+        
+        if not room_code or not choice:
+            return
+        
+        room = game_manager.get_room(room_code)
+        if not room:
+            return
+        
+        # Only during selection phase
+        if room.game_state.phase != 'selection':
+            return
+        
+        # Only the selected player can choose
+        player = room.get_player_by_sid(request.sid)
+        if not player or player.name != room.game_state.selected_player:
+            return
+        
+        # Set the choice
+        room.game_state.set_selected_choice(choice)
+        
+        # Broadcast updated state
+        emit('game_state_update', room.game_state.to_dict(), room=room_code)
+    
+    @socketio.on('vote_skip')
+    def on_vote_skip(data):
+        room_code = data.get('room')
+        
+        if not room_code:
+            return
+        
+        room = game_manager.get_room(room_code)
+        if not room:
+            return
+        
+        # Only during truth_dare phase
+        if room.game_state.phase != 'truth_dare':
+            return
+        
+        # Only non-selected players can vote
+        player = room.get_player_by_sid(request.sid)
+        if not player or player.name == room.game_state.selected_player:
+            return
+        
+        # Add vote
+        room.game_state.add_skip_vote(request.sid)
+        
+        # Check if at least half of other players voted
+        other_players_count = len(room.players) - 1  # Exclude selected player
+        required_votes = (other_players_count + 1) // 2  # At least half (ceiling division)
+        
+        if room.game_state.get_skip_vote_count() >= required_votes:
+            # Reduce timer to 5 seconds
+            room.game_state.reduce_timer(5)
+        
+        # Broadcast updated state
+        emit('game_state_update', room.game_state.to_dict(), room=room_code)
     
     @socketio.on('submit_truth_dare')
     def on_submit_truth_dare(data):

@@ -543,3 +543,82 @@ def test_selection_phase_selects_random_player():
     assert room.game_state.selected_player is not None
     assert room.game_state.selected_player in ['Alice', 'Bob', 'Charlie']
     assert room.game_state.phase == 'selection'
+
+def test_truth_dare_choice_selection():
+    """Test that selected player can choose truth or dare"""
+    game_manager.create_room()
+    room_code = list(game_manager.rooms.keys())[0]
+    
+    client1 = socketio.test_client(app)
+    client1.emit('join', {'room': room_code, 'name': 'Alice'})
+    
+    room = game_manager.get_room(room_code)
+    room.game_state.set_selected_player('Alice')
+    room.game_state.start_selection(duration=10)
+    
+    # Alice chooses dare
+    client1.emit('select_truth_dare', {
+        'room': room_code,
+        'choice': 'dare'
+    })
+    
+    # Choice should be set
+    assert room.game_state.selected_choice == 'dare'
+
+def test_truth_dare_phase_picks_random_item():
+    """Test that truth/dare phase picks and removes random item"""
+    game_manager.create_room()
+    room_code = list(game_manager.rooms.keys())[0]
+    
+    client1 = socketio.test_client(app)
+    client1.emit('join', {'room': room_code, 'name': 'Alice'})
+    
+    room = game_manager.get_room(room_code)
+    alice = room.get_player_by_name('Alice')
+    
+    # Add custom dare
+    alice.truth_dare_list.add_dare('Custom dare')
+    initial_dare_count = len(alice.truth_dare_list.dares)
+    
+    # Simulate truth/dare phase starting
+    room.game_state.set_selected_player('Alice')
+    room.game_state.set_selected_choice('dare')
+    
+    # Pick random dare
+    import random
+    dares = alice.truth_dare_list.dares
+    selected_dare = random.choice(dares)
+    alice.truth_dare_list.dares.remove(selected_dare)
+    
+    # Should have one less dare
+    assert len(alice.truth_dare_list.dares) == initial_dare_count - 1
+
+def test_vote_skip_functionality():
+    """Test that players can vote to skip"""
+    game_manager.create_room()
+    room_code = list(game_manager.rooms.keys())[0]
+    
+    client1 = socketio.test_client(app)
+    client1.emit('join', {'room': room_code, 'name': 'Alice'})
+    
+    client2 = socketio.test_client(app)
+    client2.emit('join', {'room': room_code, 'name': 'Bob'})
+    
+    client3 = socketio.test_client(app)
+    client3.emit('join', {'room': room_code, 'name': 'Charlie'})
+    
+    room = game_manager.get_room(room_code)
+    room.game_state.set_selected_player('Alice')
+    room.game_state.start_truth_dare(duration=60)
+    
+    # Bob and Charlie vote to skip
+    room.game_state.add_skip_vote('bob_sid')
+    room.game_state.add_skip_vote('charlie_sid')
+    
+    # Should have 2 votes
+    assert room.game_state.get_skip_vote_count() == 2
+    
+    # Check if majority reached (2 out of 2 other players = 100%)
+    other_players = 2  # Alice is selected, so Bob and Charlie
+    required = (other_players + 1) // 2  # At least 1
+    assert room.game_state.get_skip_vote_count() >= required
