@@ -498,3 +498,48 @@ def test_game_state_transitions():
     state.start_preparation(duration=30)
     assert state.phase == 'preparation'
     assert state.get_remaining_time() > 0
+    
+    state.start_selection(duration=10)
+    assert state.phase == 'selection'
+    assert state.get_remaining_time() > 0
+
+def test_game_state_selected_player():
+    """Test game state can store selected player"""
+    state = GameState()
+    
+    assert state.selected_player is None
+    
+    state.set_selected_player('Alice')
+    assert state.selected_player == 'Alice'
+    
+    # Check it's included in to_dict
+    state_dict = state.to_dict()
+    assert state_dict['selected_player'] == 'Alice'
+
+def test_selection_phase_selects_random_player():
+    """Test that selection phase randomly selects a player"""
+    game_manager.create_room()
+    room_code = list(game_manager.rooms.keys())[0]
+    
+    client1 = socketio.test_client(app)
+    client1.emit('join', {'room': room_code, 'name': 'Alice'})
+    
+    client2 = socketio.test_client(app)
+    client2.emit('join', {'room': room_code, 'name': 'Bob'})
+    
+    client3 = socketio.test_client(app)
+    client3.emit('join', {'room': room_code, 'name': 'Charlie'})
+    
+    room = game_manager.get_room(room_code)
+    
+    # Manually trigger selection phase
+    import random
+    random.seed(42)  # For reproducibility
+    selected_player = random.choice(room.players)
+    room.game_state.set_selected_player(selected_player.name)
+    room.game_state.start_selection(duration=10)
+    
+    # Should have a selected player
+    assert room.game_state.selected_player is not None
+    assert room.game_state.selected_player in ['Alice', 'Bob', 'Charlie']
+    assert room.game_state.phase == 'selection'

@@ -216,6 +216,32 @@
     .lobby-section.hide {
       display: none;
     }
+    .selection-phase {
+      padding: 40px 20px;
+      background: #e7f3ff;
+      border-radius: 8px;
+      text-align: center;
+    }
+    .selection-title {
+      font-size: 24px;
+      color: #0c5460;
+      margin-bottom: 20px;
+    }
+    .selected-player-display {
+      font-size: 48px;
+      font-weight: bold;
+      color: #004085;
+      padding: 30px;
+      background: white;
+      border-radius: 12px;
+      margin: 20px 0;
+      box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+    }
+    .selection-timer {
+      font-size: 18px;
+      color: #666;
+      margin-top: 10px;
+    }
   </style>
 </head>
 <body>
@@ -290,6 +316,19 @@
           <button onclick="submitTruthDare()">Submit</button>
           
           <div id="submission-success" class="submission-success"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Selection Phase -->
+    <div id="selection-section" style="display: none;">
+      <div class="selection-phase">
+        <div class="selection-title">Selected Player</div>
+        <div class="selected-player-display" id="selected-player-name">
+          ???
+        </div>
+        <div class="selection-timer">
+          Time remaining: <span id="selection-timer">10</span>s
         </div>
       </div>
     </div>
@@ -398,15 +437,30 @@
         gameArea.classList.add('show');
         document.getElementById('countdown-section').style.display = 'block';
         document.getElementById('preparation-section').style.display = 'none';
+        document.getElementById('selection-section').style.display = 'none';
         
         // Update countdown timer
         startCountdownTimer();
       } else if (gameState.phase === 'preparation') {
         document.getElementById('countdown-section').style.display = 'none';
         document.getElementById('preparation-section').style.display = 'block';
+        document.getElementById('selection-section').style.display = 'none';
         
         // Update preparation timer
         startPreparationTimer();
+      } else if (gameState.phase === 'selection') {
+        document.getElementById('countdown-section').style.display = 'none';
+        document.getElementById('preparation-section').style.display = 'none';
+        document.getElementById('selection-section').style.display = 'block';
+        
+        // Update selected player display
+        const playerNameElement = document.getElementById('selected-player-name');
+        if (gameState.selected_player) {
+          playerNameElement.textContent = gameState.selected_player;
+        }
+        
+        // Update selection timer
+        startSelectionTimer();
       }
     }
 
@@ -425,6 +479,17 @@
       clearInterval(timerInterval);
       timerInterval = setInterval(() => {
         const timer = document.getElementById('prep-timer');
+        if (timer) {
+          timer.textContent = Math.max(0, gameState.remaining_time);
+          gameState.remaining_time--;
+        }
+      }, 1000);
+    }
+
+    function startSelectionTimer() {
+      clearInterval(timerInterval);
+      timerInterval = setInterval(() => {
+        const timer = document.getElementById('selection-timer');
         if (timer) {
           timer.textContent = Math.max(0, gameState.remaining_time);
           gameState.remaining_time--;

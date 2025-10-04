@@ -2,6 +2,7 @@ from flask_socketio import join_room, leave_room, emit
 from flask import request
 import threading
 import time
+import random
 
 def register_socket_events(socketio, game_manager):
     """Register SocketIO event handlers"""
@@ -88,8 +89,23 @@ def register_socket_events(socketio, game_manager):
             room = game_manager.get_room(room_code)
             if room:
                 room.game_state.start_preparation(duration=30)
-                # Use socketio instance to emit from background thread
                 socketio.emit('game_state_update', room.game_state.to_dict(), room=room_code, namespace='/')
+                
+                # Schedule selection phase after preparation
+                def start_selection():
+                    time.sleep(30)
+                    room = game_manager.get_room(room_code)
+                    if room and len(room.players) > 0:
+                        # Randomly select a player
+                        selected_player = random.choice(room.players)
+                        room.game_state.set_selected_player(selected_player.name)
+                        room.game_state.start_selection(duration=10)
+                        
+                        socketio.emit('game_state_update', room.game_state.to_dict(), room=room_code, namespace='/')
+                
+                selection_thread = threading.Thread(target=start_selection)
+                selection_thread.daemon = True
+                selection_thread.start()
         
         thread = threading.Thread(target=start_preparation)
         thread.daemon = True
