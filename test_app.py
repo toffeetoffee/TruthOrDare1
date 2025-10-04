@@ -1,5 +1,8 @@
 import pytest
+import time
 from app import app, socketio, game_manager
+from Model.truth_dare_list import TruthDareList
+from Model.game_state import GameState
 
 @pytest.fixture
 def client():
@@ -294,6 +297,79 @@ def test_host_disconnect_transfers_host():
     assert room.players[0].name == 'Bob'
     assert room.host_sid == room.players[0].socket_id
 
+# === Game Logic Tests ===
+
+def test_host_can_start_game():
+    """Test that host can start the game"""
+    game_manager.create_room()
+    room_code = list(game_manager.rooms.keys())[0]
+    
+    client1 = socketio.test_client(app)
+    client1.emit('join', {'room': room_code, 'name': 'Alice'})
+    
+    room = game_manager.get_room(room_code)
+    assert room.game_state.phase == 'lobby'
+    
+    # Host starts game
+    client1.emit('start_game', {'room': room_code})
+    
+    # Should be in countdown phase
+    room = game_manager.get_room(room_code)
+    assert room.game_state.phase == 'countdown'
+    assert room.game_state.started == True
+
+def test_non_host_cannot_start_game():
+    """Test that non-host cannot start game"""
+    game_manager.create_room()
+    room_code = list(game_manager.rooms.keys())[0]
+    
+    client1 = socketio.test_client(app)
+    client1.emit('join', {'room': room_code, 'name': 'Alice'})
+    
+    client2 = socketio.test_client(app)
+    client2.emit('join', {'room': room_code, 'name': 'Bob'})
+    
+    room = game_manager.get_room(room_code)
+    assert room.game_state.phase == 'lobby'
+    
+    # Bob (non-host) tries to start
+    client2.emit('start_game', {'room': room_code})
+    
+    # Should still be in lobby
+    room = game_manager.get_room(room_code)
+    assert room.game_state.phase == 'lobby'
+
+def test_submit_truth_dare():
+    """Test submitting a truth or dare"""
+    game_manager.create_room()
+    room_code = list(game_manager.rooms.keys())[0]
+    
+    client1 = socketio.test_client(app)
+    client1.emit('join', {'room': room_code, 'name': 'Alice'})
+    
+    client2 = socketio.test_client(app)
+    client2.emit('join', {'room': room_code, 'name': 'Bob'})
+    
+    room = game_manager.get_room(room_code)
+    
+    # Start game and move to preparation
+    room.game_state.start_preparation()
+    
+    # Submit a truth
+    client1.emit('submit_truth_dare', {
+        'room': room_code,
+        'text': 'What is your favorite color?',
+        'type': 'truth',
+        'target': 'Bob'
+    })
+    
+    # Bob should have the new truth
+    bob = room.get_player_by_name('Bob')
+    truths = bob.truth_dare_list.get_truths()
+    assert len(truths) == 6  # 5 defaults + 1 custom
+    assert truths[-1]['text'] == 'What is your favorite color?'
+    assert truths[-1]['is_default'] == False
+
 # === Model Tests ===
 
 def test_game_manager_create_room():
@@ -331,3 +407,52 @@ def test_room_remove_player():
     assert room.players[0].name == 'Bob'
     # Host should transfer
     assert room.host_sid == 'sid2'
+
+def test_truth_dare_list_loads_defaults():
+    """Test that TruthDareList loads default truths and dares"""
+    td_list = TruthDareList()
+    
+    truths = td_list.get_truths()
+    dares = td_list.get_dares()
+    
+    assert len(truths) == 5
+    assert len(dares) == 5
+    
+    # Check they're marked as defaults
+    for truth in truths:
+        assert truth['is_default'] == True
+    for dare in dares:
+        assert dare['is_default'] == True
+
+def test_truth_dare_list_add_custom():
+    """Test adding custom truths and dares"""
+    td_list = TruthDareList()
+    
+    td_list.add_truth('Custom truth?')
+    td_list.add_dare('Custom dare')
+    
+    truths = td_list.get_truths()
+    dares = td_list.get_dares()
+    
+    assert len(truths) == 6  # 5 defaults + 1 custom
+    assert len(dares) == 6
+    
+    # Check custom items are not marked as default
+    assert truths[-1]['is_default'] == False
+    assert dares[-1]['is_default'] == False
+
+def test_game_state_transitions():
+    """Test game state phase transitions"""
+    state = GameState()
+    
+    assert state.phase == 'lobby'
+    assert state.started == False
+    
+    state.start_countdown(duration=10)
+    assert state.phase == 'countdown'
+    assert state.started == True
+    assert state.get_remaining_time() > 0
+    
+    state.start_preparation(duration=30)
+    assert state.phase == 'preparation'
+    assert state.get_remaining_time() > 0

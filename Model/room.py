@@ -1,4 +1,5 @@
 from Model.player import Player
+from Model.game_state import GameState
 
 class Room:
     """Represents a game room"""
@@ -7,6 +8,7 @@ class Room:
         self.code = code
         self.host_sid = None
         self.players = []
+        self.game_state = GameState()
     
     def add_player(self, player):
         """Add a player to the room"""
@@ -32,6 +34,20 @@ class Room:
     def get_player_names(self):
         """Get list of player names"""
         return [p.name for p in self.players]
+    
+    def get_player_by_sid(self, socket_id):
+        """Get player by socket ID"""
+        for player in self.players:
+            if player.socket_id == socket_id:
+                return player
+        return None
+    
+    def get_player_by_name(self, name):
+        """Get player by name"""
+        for player in self.players:
+            if player.name == name:
+                return player
+        return None
     
     def is_empty(self):
         """Check if room has no players"""

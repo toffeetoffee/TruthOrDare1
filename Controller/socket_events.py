@@ -1,5 +1,7 @@
 from flask_socketio import join_room, leave_room, emit
 from flask import request
+import threading
+import time
 
 def register_socket_events(socketio, game_manager):
     """Register SocketIO event handlers"""
@@ -58,6 +60,76 @@ def register_socket_events(socketio, game_manager):
         
         # Delete room
         game_manager.delete_room(room_code)
+    
+    @socketio.on('start_game')
+    def on_start_game(data):
+        room_code = data.get('room')
+        
+        if not room_code:
+            return
+        
+        room = game_manager.get_room(room_code)
+        if not room:
+            return
+        
+        # Only host can start
+        if not room.is_host(request.sid):
+            return
+        
+        # Start countdown
+        room.game_state.start_countdown(duration=10)
+        
+        # Broadcast game state
+        emit('game_state_update', room.game_state.to_dict(), room=room_code)
+        
+        # Schedule preparation phase after countdown
+        def start_preparation():
+            time.sleep(10)
+            room = game_manager.get_room(room_code)
+            if room:
+                room.game_state.start_preparation(duration=30)
+                # Use socketio instance to emit from background thread
+                socketio.emit('game_state_update', room.game_state.to_dict(), room=room_code, namespace='/')
+        
+        thread = threading.Thread(target=start_preparation)
+        thread.daemon = True
+        thread.start()
+    
+    @socketio.on('submit_truth_dare')
+    def on_submit_truth_dare(data):
+        room_code = data.get('room')
+        text = data.get('text', '').strip()
+        item_type = data.get('type')  # 'truth' or 'dare'
+        target_name = data.get('target')  # player name
+        
+        if not room_code or not text or not item_type or not target_name:
+            return
+        
+        room = game_manager.get_room(room_code)
+        if not room:
+            return
+        
+        # Only allow during preparation phase
+        if room.game_state.phase != 'preparation':
+            return
+        
+        # Find target player
+        target_player = room.get_player_by_name(target_name)
+        if not target_player:
+            return
+        
+        # Add to target player's list
+        if item_type == 'truth':
+            target_player.truth_dare_list.add_truth(text)
+        elif item_type == 'dare':
+            target_player.truth_dare_list.add_dare(text)
+        
+        # Notify success
+        emit('submission_success', {
+            'text': text,
+            'type': item_type,
+            'target': target_name
+        }, to=request.sid)
     
     @socketio.on('disconnect')
     def on_disconnect():

@@ -78,6 +78,10 @@
     button:hover {
       opacity: 0.8;
     }
+    button:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
     .btn-leave {
       background: #dc3545;
       color: white;
@@ -100,6 +104,84 @@
     .host-controls.show {
       display: block;
     }
+    .game-area {
+      display: none;
+      margin-top: 32px;
+    }
+    .game-area.show {
+      display: block;
+    }
+    .countdown {
+      text-align: center;
+      padding: 40px;
+      background: #fff3cd;
+      border-radius: 8px;
+      margin-bottom: 20px;
+    }
+    .countdown-timer {
+      font-size: 48px;
+      font-weight: bold;
+      color: #856404;
+    }
+    .preparation-phase {
+      padding: 20px;
+      background: #d1ecf1;
+      border-radius: 8px;
+    }
+    .phase-timer {
+      text-align: center;
+      font-size: 24px;
+      font-weight: bold;
+      color: #0c5460;
+      margin-bottom: 20px;
+    }
+    .submission-form {
+      background: white;
+      padding: 16px;
+      border-radius: 8px;
+      margin-bottom: 16px;
+    }
+    .submission-form textarea {
+      width: 100%;
+      min-height: 60px;
+      padding: 8px;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+      font-family: inherit;
+      font-size: 14px;
+      box-sizing: border-box;
+      resize: vertical;
+    }
+    .submission-form select {
+      width: 100%;
+      padding: 8px;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+      font-size: 14px;
+      margin-top: 8px;
+      box-sizing: border-box;
+    }
+    .submission-form button {
+      width: 100%;
+      margin-top: 8px;
+      background: #17a2b8;
+      color: white;
+    }
+    .submission-success {
+      padding: 8px;
+      background: #d4edda;
+      border: 1px solid #c3e6cb;
+      border-radius: 4px;
+      color: #155724;
+      margin-top: 8px;
+      display: none;
+    }
+    .lobby-section {
+      display: block;
+    }
+    .lobby-section.hide {
+      display: none;
+    }
   </style>
 </head>
 <body>
@@ -111,25 +193,65 @@
     <div style="margin-top: 12px; color: #666;">Share this code with your friends!</div>
   </div>
 
-  <div class="players-section">
-    <h2>Players in Room</h2>
-    <ul id="player-list" class="player-list">
-      <li class="player-item">Waiting for players...</li>
-    </ul>
-    <div id="player-count" class="player-count"></div>
-  </div>
-
-  <div class="button-group">
-    <button class="btn-leave" onclick="leaveRoom()">Leave Room</button>
-  </div>
-
-  <div id="host-controls" class="host-controls">
-    <div class="button-group">
-      <button class="btn-settings" onclick="openSettings()">Settings</button>
-      <button class="btn-start" onclick="startGame()">Start Game</button>
+  <!-- Lobby Section -->
+  <div id="lobby-section" class="lobby-section">
+    <div class="players-section">
+      <h2>Players in Room</h2>
+      <ul id="player-list" class="player-list">
+        <li class="player-item">Waiting for players...</li>
+      </ul>
+      <div id="player-count" class="player-count"></div>
     </div>
+
     <div class="button-group">
-      <button class="btn-destroy" onclick="destroyRoom()">Destroy Room</button>
+      <button class="btn-leave" onclick="leaveRoom()">Leave Room</button>
+    </div>
+
+    <div id="host-controls" class="host-controls">
+      <div class="button-group">
+        <button class="btn-settings" onclick="openSettings()">Settings</button>
+        <button id="start-button" class="btn-start" onclick="startGame()">Start Game</button>
+      </div>
+      <div class="button-group">
+        <button class="btn-destroy" onclick="destroyRoom()">Destroy Room</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Game Area -->
+  <div id="game-area" class="game-area">
+    <!-- Countdown -->
+    <div id="countdown-section" style="display: none;">
+      <div class="countdown">
+        <div>Game Starting In</div>
+        <div id="countdown-timer" class="countdown-timer">10</div>
+      </div>
+    </div>
+
+    <!-- Preparation Phase -->
+    <div id="preparation-section" style="display: none;">
+      <div class="preparation-phase">
+        <div class="phase-timer">
+          Preparation Phase: <span id="prep-timer">30</span>s
+        </div>
+        
+        <div class="submission-form">
+          <textarea id="truth-dare-text" placeholder="Enter a truth question or dare challenge..."></textarea>
+          
+          <select id="truth-dare-type">
+            <option value="truth">Truth</option>
+            <option value="dare">Dare</option>
+          </select>
+          
+          <select id="target-player">
+            <option value="">Select player...</option>
+          </select>
+          
+          <button onclick="submitTruthDare()">Submit</button>
+          
+          <div id="submission-success" class="submission-success"></div>
+        </div>
+      </div>
     </div>
   </div>
 
@@ -141,10 +263,15 @@
     
     let mySocketId = null;
     let hostSocketId = null;
+    let gameState = { phase: 'lobby', remaining_time: 0 };
+    let timerInterval = null;
 
     const playerList = document.getElementById('player-list');
     const playerCount = document.getElementById('player-count');
     const hostControls = document.getElementById('host-controls');
+    const lobbySection = document.getElementById('lobby-section');
+    const gameArea = document.getElementById('game-area');
+    const startButton = document.getElementById('start-button');
 
     // Join the room when connected
     socket.on('connect', () => {
@@ -162,10 +289,22 @@
 
       hostSocketId = data.host_sid;
 
+      // Update target player dropdown
+      const targetSelect = document.getElementById('target-player');
+      const currentValue = targetSelect.value;
+      targetSelect.innerHTML = '<option value="">Select player...</option>';
+      data.players.forEach(name => {
+        const option = document.createElement('option');
+        option.value = name;
+        option.textContent = name;
+        targetSelect.appendChild(option);
+      });
+      targetSelect.value = currentValue;
+
       // Display all players
       playerList.innerHTML = data.players
         .map((name, index) => {
-          const isHost = (index === 0); // First player is always host in the list
+          const isHost = (index === 0);
           const hostBadge = isHost ? '<span class="host-badge">(Host)</span>' : '';
           const hostClass = isHost ? ' host' : '';
           return `<li class="player-item${hostClass}">${escapeHtml(name)}${hostBadge}</li>`;
@@ -181,6 +320,68 @@
         hostControls.classList.remove('show');
       }
     });
+
+    // Game state update
+    socket.on('game_state_update', (data) => {
+      gameState = data;
+      updateGameUI();
+    });
+
+    // Submission success
+    socket.on('submission_success', (data) => {
+      const successDiv = document.getElementById('submission-success');
+      successDiv.textContent = `✓ Added ${data.type}: "${data.text}" to ${data.target}`;
+      successDiv.style.display = 'block';
+      
+      // Clear form
+      document.getElementById('truth-dare-text').value = '';
+      
+      // Hide success message after 3 seconds
+      setTimeout(() => {
+        successDiv.style.display = 'none';
+      }, 3000);
+    });
+
+    // Update game UI based on phase
+    function updateGameUI() {
+      if (gameState.phase === 'countdown') {
+        lobbySection.classList.add('hide');
+        gameArea.classList.add('show');
+        document.getElementById('countdown-section').style.display = 'block';
+        document.getElementById('preparation-section').style.display = 'none';
+        
+        // Update countdown timer
+        startCountdownTimer();
+      } else if (gameState.phase === 'preparation') {
+        document.getElementById('countdown-section').style.display = 'none';
+        document.getElementById('preparation-section').style.display = 'block';
+        
+        // Update preparation timer
+        startPreparationTimer();
+      }
+    }
+
+    function startCountdownTimer() {
+      clearInterval(timerInterval);
+      timerInterval = setInterval(() => {
+        const timer = document.getElementById('countdown-timer');
+        if (timer) {
+          timer.textContent = Math.max(0, gameState.remaining_time);
+          gameState.remaining_time--;
+        }
+      }, 1000);
+    }
+
+    function startPreparationTimer() {
+      clearInterval(timerInterval);
+      timerInterval = setInterval(() => {
+        const timer = document.getElementById('prep-timer');
+        if (timer) {
+          timer.textContent = Math.max(0, gameState.remaining_time);
+          gameState.remaining_time--;
+        }
+      }, 1000);
+    }
 
     // Room was destroyed
     socket.on('room_destroyed', () => {
@@ -212,7 +413,31 @@
     }
 
     function startGame() {
-      alert('Start Game - Coming soon!');
+      startButton.disabled = true;
+      socket.emit('start_game', { room: ROOM });
+    }
+
+    function submitTruthDare() {
+      const text = document.getElementById('truth-dare-text').value.trim();
+      const type = document.getElementById('truth-dare-type').value;
+      const target = document.getElementById('target-player').value;
+
+      if (!text) {
+        alert('Please enter a truth or dare!');
+        return;
+      }
+
+      if (!target) {
+        alert('Please select a player!');
+        return;
+      }
+
+      socket.emit('submit_truth_dare', {
+        room: ROOM,
+        text: text,
+        type: type,
+        target: target
+      });
     }
 
     // Simple HTML escape function

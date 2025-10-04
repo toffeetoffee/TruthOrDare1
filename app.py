@@ -6,7 +6,7 @@ from Controller.socket_events import register_socket_events
 
 # Initialize Flask app
 app = Flask(__name__, template_folder='View')
-app.config['SECRET_KEY'] = 'replace-this-with-a-secret'
+app.config['SECRET_KEY'] = 'prts-is-watching-you'
 
 # Initialize SocketIO
 socketio = SocketIO(app, cors_allowed_origins='*')
