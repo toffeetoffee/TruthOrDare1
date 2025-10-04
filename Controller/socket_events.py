@@ -100,9 +100,9 @@ def register_socket_events(socketio, game_manager):
         room_code = data.get('room')
         text = data.get('text', '').strip()
         item_type = data.get('type')  # 'truth' or 'dare'
-        target_name = data.get('target')  # player name
+        target_names = data.get('targets', [])  # list of player names
         
-        if not room_code or not text or not item_type or not target_name:
+        if not room_code or not text or not item_type or not target_names:
             return
         
         room = game_manager.get_room(room_code)
@@ -113,23 +113,24 @@ def register_socket_events(socketio, game_manager):
         if room.game_state.phase != 'preparation':
             return
         
-        # Find target player
-        target_player = room.get_player_by_name(target_name)
-        if not target_player:
-            return
-        
-        # Add to target player's list
-        if item_type == 'truth':
-            target_player.truth_dare_list.add_truth(text)
-        elif item_type == 'dare':
-            target_player.truth_dare_list.add_dare(text)
+        # Add to each target player's list
+        successfully_added = []
+        for target_name in target_names:
+            target_player = room.get_player_by_name(target_name)
+            if target_player:
+                if item_type == 'truth':
+                    target_player.truth_dare_list.add_truth(text)
+                elif item_type == 'dare':
+                    target_player.truth_dare_list.add_dare(text)
+                successfully_added.append(target_name)
         
         # Notify success
-        emit('submission_success', {
-            'text': text,
-            'type': item_type,
-            'target': target_name
-        }, to=request.sid)
+        if successfully_added:
+            emit('submission_success', {
+                'text': text,
+                'type': item_type,
+                'targets': successfully_added
+            }, to=request.sid)
     
     @socketio.on('disconnect')
     def on_disconnect():

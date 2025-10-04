@@ -355,12 +355,12 @@ def test_submit_truth_dare():
     # Start game and move to preparation
     room.game_state.start_preparation()
     
-    # Submit a truth
+    # Submit a truth to multiple players
     client1.emit('submit_truth_dare', {
         'room': room_code,
         'text': 'What is your favorite color?',
         'type': 'truth',
-        'target': 'Bob'
+        'targets': ['Bob']
     })
     
     # Bob should have the new truth
@@ -369,6 +369,48 @@ def test_submit_truth_dare():
     assert len(truths) == 6  # 5 defaults + 1 custom
     assert truths[-1]['text'] == 'What is your favorite color?'
     assert truths[-1]['is_default'] == False
+
+def test_submit_truth_dare_multiple_targets():
+    """Test submitting a truth or dare to multiple players"""
+    game_manager.create_room()
+    room_code = list(game_manager.rooms.keys())[0]
+    
+    client1 = socketio.test_client(app)
+    client1.emit('join', {'room': room_code, 'name': 'Alice'})
+    
+    client2 = socketio.test_client(app)
+    client2.emit('join', {'room': room_code, 'name': 'Bob'})
+    
+    client3 = socketio.test_client(app)
+    client3.emit('join', {'room': room_code, 'name': 'Charlie'})
+    
+    room = game_manager.get_room(room_code)
+    
+    # Start game and move to preparation
+    room.game_state.start_preparation()
+    
+    # Submit a dare to multiple players
+    client1.emit('submit_truth_dare', {
+        'room': room_code,
+        'text': 'Do 20 jumping jacks',
+        'type': 'dare',
+        'targets': ['Bob', 'Charlie']
+    })
+    
+    # Both Bob and Charlie should have the new dare
+    bob = room.get_player_by_name('Bob')
+    charlie = room.get_player_by_name('Charlie')
+    
+    bob_dares = bob.truth_dare_list.get_dares()
+    charlie_dares = charlie.truth_dare_list.get_dares()
+    
+    assert len(bob_dares) == 6  # 5 defaults + 1 custom
+    assert len(charlie_dares) == 6
+    
+    assert bob_dares[-1]['text'] == 'Do 20 jumping jacks'
+    assert charlie_dares[-1]['text'] == 'Do 20 jumping jacks'
+    assert bob_dares[-1]['is_default'] == False
+    assert charlie_dares[-1]['is_default'] == False
 
 # === Model Tests ===
 

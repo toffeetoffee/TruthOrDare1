@@ -161,6 +161,40 @@
       margin-top: 8px;
       box-sizing: border-box;
     }
+    .player-checkboxes {
+      margin-top: 8px;
+      padding: 12px;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+      background: #f9f9f9;
+      max-height: 200px;
+      overflow-y: auto;
+    }
+    .player-checkbox-item {
+      padding: 6px 0;
+    }
+    .player-checkbox-item label {
+      display: flex;
+      align-items: center;
+      cursor: pointer;
+      font-weight: normal;
+    }
+    .player-checkbox-item input[type="checkbox"] {
+      margin-right: 8px;
+      width: auto;
+    }
+    .checkbox-controls {
+      display: flex;
+      gap: 8px;
+      margin-top: 8px;
+    }
+    .checkbox-controls button {
+      flex: 1;
+      padding: 6px;
+      font-size: 13px;
+      background: #6c757d;
+      color: white;
+    }
     .submission-form button {
       width: 100%;
       margin-top: 8px;
@@ -243,9 +277,15 @@
             <option value="dare">Dare</option>
           </select>
           
-          <select id="target-player">
-            <option value="">Select player...</option>
-          </select>
+          <div style="margin-top: 8px; font-weight: 500;">Add to players:</div>
+          <div id="player-checkboxes" class="player-checkboxes">
+            <div style="color: #999; text-align: center;">No other players yet</div>
+          </div>
+          
+          <div class="checkbox-controls">
+            <button onclick="selectAllPlayers()">Select All</button>
+            <button onclick="deselectAllPlayers()">Deselect All</button>
+          </div>
           
           <button onclick="submitTruthDare()">Submit</button>
           
@@ -289,17 +329,24 @@
 
       hostSocketId = data.host_sid;
 
-      // Update target player dropdown
-      const targetSelect = document.getElementById('target-player');
-      const currentValue = targetSelect.value;
-      targetSelect.innerHTML = '<option value="">Select player...</option>';
-      data.players.forEach(name => {
-        const option = document.createElement('option');
-        option.value = name;
-        option.textContent = name;
-        targetSelect.appendChild(option);
-      });
-      targetSelect.value = currentValue;
+      // Update player checkboxes (exclude current player)
+      const playerCheckboxes = document.getElementById('player-checkboxes');
+      const otherPlayers = data.players.filter(name => name !== NAME);
+      
+      if (otherPlayers.length === 0) {
+        playerCheckboxes.innerHTML = '<div style="color: #999; text-align: center;">No other players yet</div>';
+      } else {
+        playerCheckboxes.innerHTML = otherPlayers
+          .map(name => `
+            <div class="player-checkbox-item">
+              <label>
+                <input type="checkbox" name="target-player" value="${escapeHtml(name)}">
+                ${escapeHtml(name)}
+              </label>
+            </div>
+          `)
+          .join('');
+      }
 
       // Display all players
       playerList.innerHTML = data.players
@@ -330,11 +377,13 @@
     // Submission success
     socket.on('submission_success', (data) => {
       const successDiv = document.getElementById('submission-success');
-      successDiv.textContent = `✓ Added ${data.type}: "${data.text}" to ${data.target}`;
+      const targetList = data.targets.join(', ');
+      successDiv.textContent = `✓ Added ${data.type}: "${data.text}" to ${targetList}`;
       successDiv.style.display = 'block';
       
       // Clear form
       document.getElementById('truth-dare-text').value = '';
+      deselectAllPlayers();
       
       // Hide success message after 3 seconds
       setTimeout(() => {
@@ -417,18 +466,29 @@
       socket.emit('start_game', { room: ROOM });
     }
 
+    function selectAllPlayers() {
+      const checkboxes = document.querySelectorAll('input[name="target-player"]');
+      checkboxes.forEach(cb => cb.checked = true);
+    }
+
+    function deselectAllPlayers() {
+      const checkboxes = document.querySelectorAll('input[name="target-player"]');
+      checkboxes.forEach(cb => cb.checked = false);
+    }
+
     function submitTruthDare() {
       const text = document.getElementById('truth-dare-text').value.trim();
       const type = document.getElementById('truth-dare-type').value;
-      const target = document.getElementById('target-player').value;
+      const checkboxes = document.querySelectorAll('input[name="target-player"]:checked');
+      const targets = Array.from(checkboxes).map(cb => cb.value);
 
       if (!text) {
         alert('Please enter a truth or dare!');
         return;
       }
 
-      if (!target) {
-        alert('Please select a player!');
+      if (targets.length === 0) {
+        alert('Please select at least one player!');
         return;
       }
 
@@ -436,7 +496,7 @@
         room: ROOM,
         text: text,
         type: type,
-        target: target
+        targets: targets
       });
     }
 
