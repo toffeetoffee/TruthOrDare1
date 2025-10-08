@@ -62,6 +62,42 @@ def register_socket_events(socketio, game_manager):
         # Delete room
         game_manager.delete_room(room_code)
     
+    @socketio.on('update_settings')
+    def on_update_settings(data):
+        room_code = data.get('room')
+        settings = data.get('settings', {})
+        
+        if not room_code:
+            return
+        
+        room = game_manager.get_room(room_code)
+        if not room:
+            return
+        
+        # Only host can update settings
+        if not room.is_host(request.sid):
+            return
+        
+        # Update settings
+        room.update_settings(settings)
+        
+        # Broadcast updated settings to all players
+        emit('settings_updated', {'settings': room.settings}, room=room_code)
+    
+    @socketio.on('get_settings')
+    def on_get_settings(data):
+        room_code = data.get('room')
+        
+        if not room_code:
+            return
+        
+        room = game_manager.get_room(room_code)
+        if not room:
+            return
+        
+        # Send current settings to requester
+        emit('settings_updated', {'settings': room.settings}, to=request.sid)
+    
     @socketio.on('start_game')
     def on_start_game(data):
         room_code = data.get('room')
@@ -77,35 +113,39 @@ def register_socket_events(socketio, game_manager):
         if not room.is_host(request.sid):
             return
         
-        # Start countdown
-        room.game_state.start_countdown(duration=10)
+        # Start countdown with configurable duration
+        countdown_duration = room.settings['countdown_duration']
+        room.game_state.start_countdown(duration=countdown_duration)
         
         # Broadcast game state
         emit('game_state_update', room.game_state.to_dict(), room=room_code)
         
         # Schedule preparation phase after countdown
         def start_preparation():
-            time.sleep(10)
+            time.sleep(countdown_duration)
             room = game_manager.get_room(room_code)
             if room:
-                room.game_state.start_preparation(duration=30)
+                prep_duration = room.settings['preparation_duration']
+                room.game_state.start_preparation(duration=prep_duration)
                 socketio.emit('game_state_update', room.game_state.to_dict(), room=room_code, namespace='/')
                 
                 # Schedule selection phase after preparation
                 def start_selection():
-                    time.sleep(30)
+                    time.sleep(prep_duration)
                     room = game_manager.get_room(room_code)
                     if room and len(room.players) > 0:
                         # Randomly select a player
                         selected_player = random.choice(room.players)
                         room.game_state.set_selected_player(selected_player.name)
-                        room.game_state.start_selection(duration=10)
+                        
+                        selection_duration = room.settings['selection_duration']
+                        room.game_state.start_selection(duration=selection_duration)
                         
                         socketio.emit('game_state_update', room.game_state.to_dict(), room=room_code, namespace='/')
                         
                         # Schedule truth/dare phase after selection
                         def start_truth_dare_phase():
-                            time.sleep(10)
+                            time.sleep(selection_duration)
                             room = game_manager.get_room(room_code)
                             if room:
                                 # If no choice was made, randomize
@@ -130,8 +170,9 @@ def register_socket_events(socketio, game_manager):
                                             selected_player.truth_dare_list.dares.remove(selected_item)
                                             room.game_state.set_current_truth_dare(selected_item.to_dict())
                                 
-                                # Start truth/dare phase
-                                room.game_state.start_truth_dare(duration=60)
+                                # Start truth/dare phase with configurable duration
+                                td_duration = room.settings['truth_dare_duration']
+                                room.game_state.start_truth_dare(duration=td_duration)
                                 socketio.emit('game_state_update', room.game_state.to_dict(), room=room_code, namespace='/')
                                 
                                 # Schedule back to preparation after truth/dare
@@ -145,7 +186,8 @@ def register_socket_events(socketio, game_manager):
                                         
                                         # Check if phase is complete
                                         if room.game_state.is_phase_complete():
-                                            room.game_state.start_preparation(duration=30)
+                                            prep_duration = room.settings['preparation_duration']
+                                            room.game_state.start_preparation(duration=prep_duration)
                                             socketio.emit('game_state_update', room.game_state.to_dict(), room=room_code, namespace='/')
                                             
                                             # Continue the loop (selection -> truth/dare -> prep -> selection...)
@@ -223,8 +265,9 @@ def register_socket_events(socketio, game_manager):
         required_votes = (other_players_count + 1) // 2  # At least half (ceiling division)
         
         if room.game_state.get_skip_vote_count() >= required_votes:
-            # Reduce timer to 5 seconds
-            room.game_state.reduce_timer(5)
+            # Reduce timer to configured skip duration
+            skip_duration = room.settings['skip_duration']
+            room.game_state.reduce_timer(skip_duration)
         
         # Broadcast updated state
         emit('game_state_update', room.game_state.to_dict(), room=room_code)

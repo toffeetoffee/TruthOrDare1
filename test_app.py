@@ -622,3 +622,67 @@ def test_vote_skip_functionality():
     other_players = 2  # Alice is selected, so Bob and Charlie
     required = (other_players + 1) // 2  # At least 1
     assert room.game_state.get_skip_vote_count() >= required
+
+def test_room_default_settings():
+    """Test that rooms have default settings"""
+    from Model.room import Room
+    
+    room = Room('TEST')
+    
+    assert 'countdown_duration' in room.settings
+    assert 'preparation_duration' in room.settings
+    assert 'selection_duration' in room.settings
+    assert 'truth_dare_duration' in room.settings
+    assert 'skip_duration' in room.settings
+    
+    # Check default values
+    assert room.settings['countdown_duration'] == 10
+    assert room.settings['preparation_duration'] == 30
+    assert room.settings['selection_duration'] == 10
+    assert room.settings['truth_dare_duration'] == 60
+    assert room.settings['skip_duration'] == 5
+
+def test_update_room_settings():
+    """Test updating room settings"""
+    from Model.room import Room
+    
+    room = Room('TEST')
+    
+    new_settings = {
+        'countdown_duration': 15,
+        'preparation_duration': 45,
+        'selection_duration': 20,
+        'truth_dare_duration': 90,
+        'skip_duration': 10
+    }
+    
+    room.update_settings(new_settings)
+    
+    assert room.settings['countdown_duration'] == 15
+    assert room.settings['preparation_duration'] == 45
+    assert room.settings['selection_duration'] == 20
+    assert room.settings['truth_dare_duration'] == 90
+    assert room.settings['skip_duration'] == 10
+
+def test_host_can_update_settings():
+    """Test that host can update settings via socket"""
+    game_manager.create_room()
+    room_code = list(game_manager.rooms.keys())[0]
+    
+    client1 = socketio.test_client(app)
+    client1.emit('join', {'room': room_code, 'name': 'Alice'})
+    
+    room = game_manager.get_room(room_code)
+    
+    # Alice (host) updates settings
+    client1.emit('update_settings', {
+        'room': room_code,
+        'settings': {
+            'countdown_duration': 20,
+            'preparation_duration': 60
+        }
+    })
+    
+    # Settings should be updated
+    assert room.settings['countdown_duration'] == 20
+    assert room.settings['preparation_duration'] == 60

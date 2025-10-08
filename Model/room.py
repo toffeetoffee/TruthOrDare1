@@ -9,6 +9,20 @@ class Room:
         self.host_sid = None
         self.players = []
         self.game_state = GameState()
+        # Game settings (configurable by host)
+        self.settings = {
+            'countdown_duration': 10,
+            'preparation_duration': 30,
+            'selection_duration': 10,
+            'truth_dare_duration': 60,
+            'skip_duration': 5
+        }
+    
+    def update_settings(self, new_settings):
+        """Update room settings"""
+        for key, value in new_settings.items():
+            if key in self.settings:
+                self.settings[key] = int(value)
     
     def add_player(self, player):
         """Add a player to the room"""
