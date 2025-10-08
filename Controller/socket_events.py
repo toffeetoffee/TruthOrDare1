@@ -136,14 +136,21 @@ def register_socket_events(socketio, game_manager):
                                 
                                 # Schedule back to preparation after truth/dare
                                 def back_to_preparation():
-                                    time.sleep(60)
-                                    room = game_manager.get_room(room_code)
-                                    if room:
-                                        room.game_state.start_preparation(duration=30)
-                                        socketio.emit('game_state_update', room.game_state.to_dict(), room=room_code, namespace='/')
+                                    # Check timer dynamically instead of fixed sleep
+                                    while True:
+                                        time.sleep(0.5)  # Check every 0.5 seconds
+                                        room = game_manager.get_room(room_code)
+                                        if not room:
+                                            break
                                         
-                                        # Continue the loop (selection -> truth/dare -> prep -> selection...)
-                                        start_selection()
+                                        # Check if phase is complete
+                                        if room.game_state.is_phase_complete():
+                                            room.game_state.start_preparation(duration=30)
+                                            socketio.emit('game_state_update', room.game_state.to_dict(), room=room_code, namespace='/')
+                                            
+                                            # Continue the loop (selection -> truth/dare -> prep -> selection...)
+                                            start_selection()
+                                            break
                                 
                                 prep_thread = threading.Thread(target=back_to_preparation)
                                 prep_thread.daemon = True
