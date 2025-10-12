@@ -8,6 +8,7 @@ class GameState:
     PHASE_PREPARATION = 'preparation'
     PHASE_SELECTION = 'selection'
     PHASE_TRUTH_DARE = 'truth_dare'
+    PHASE_END_GAME = 'end_game'
     
     def __init__(self):
         self.phase = self.PHASE_LOBBY
@@ -18,6 +19,10 @@ class GameState:
         self.current_truth_dare = None  # The actual truth/dare being performed
         self.event_chance = 0.0  # 0% for now, will be configurable later
         self.skip_votes = set()  # Set of player socket IDs who voted to skip
+        
+        # Round tracking
+        self.current_round = 0
+        self.max_rounds = 10  # Default, can be configured
     
     def start_countdown(self, duration=10):
         """Start the countdown phase"""
@@ -34,6 +39,8 @@ class GameState:
         self.selected_choice = None
         self.current_truth_dare = None
         self.skip_votes.clear()
+        # Increment round
+        self.current_round += 1
     
     def start_selection(self, duration=10):
         """Start the selection phase"""
@@ -46,6 +53,11 @@ class GameState:
         self.phase = self.PHASE_TRUTH_DARE
         self.phase_end_time = datetime.now() + timedelta(seconds=duration)
         self.skip_votes.clear()
+    
+    def start_end_game(self):
+        """Start the end game phase"""
+        self.phase = self.PHASE_END_GAME
+        self.phase_end_time = None
     
     def set_selected_player(self, player_name):
         """Set the selected player for this round"""
@@ -85,6 +97,21 @@ class GameState:
             return False
         return datetime.now() >= self.phase_end_time
     
+    def should_end_game(self):
+        """Check if game should end (max rounds reached)"""
+        return self.current_round >= self.max_rounds
+    
+    def reset_for_new_game(self):
+        """Reset state for a new game"""
+        self.phase = self.PHASE_COUNTDOWN
+        self.phase_end_time = None
+        self.started = False
+        self.selected_player = None
+        self.selected_choice = None
+        self.current_truth_dare = None
+        self.skip_votes.clear()
+        self.current_round = 0
+    
     def to_dict(self):
         """Convert to dictionary"""
         return {
@@ -95,5 +122,7 @@ class GameState:
             'selected_choice': self.selected_choice,
             'current_truth_dare': self.current_truth_dare,
             'event_chance': self.event_chance,
-            'skip_vote_count': self.get_skip_vote_count()
+            'skip_vote_count': self.get_skip_vote_count(),
+            'current_round': self.current_round,
+            'max_rounds': self.max_rounds
         }

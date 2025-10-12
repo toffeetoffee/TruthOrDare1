@@ -653,7 +653,8 @@ def test_update_room_settings():
         'preparation_duration': 45,
         'selection_duration': 20,
         'truth_dare_duration': 90,
-        'skip_duration': 10
+        'skip_duration': 10,
+        'max_rounds': 20
     }
     
     room.update_settings(new_settings)
@@ -663,6 +664,7 @@ def test_update_room_settings():
     assert room.settings['selection_duration'] == 20
     assert room.settings['truth_dare_duration'] == 90
     assert room.settings['skip_duration'] == 10
+    assert room.settings['max_rounds'] == 20
 
 def test_host_can_update_settings():
     """Test that host can update settings via socket"""
@@ -686,3 +688,259 @@ def test_host_can_update_settings():
     # Settings should be updated
     assert room.settings['countdown_duration'] == 20
     assert room.settings['preparation_duration'] == 60
+
+# === Scoring System Tests ===
+
+def test_player_score_initialization():
+    """Test that player score starts at 0"""
+    from Model.player import Player
+    
+    player = Player('sid1', 'Alice')
+    assert player.score == 0
+
+def test_player_add_score():
+    """Test adding score to player"""
+    from Model.player import Player
+    
+    player = Player('sid1', 'Alice')
+    player.add_score(50)
+    assert player.score == 50
+    
+    player.add_score(30)
+    assert player.score == 80
+
+def test_scoring_system_values():
+    """Test scoring system point values"""
+    from Model.scoring_system import ScoringSystem
+    
+    assert ScoringSystem.POINTS_PERFORM == 100
+    assert ScoringSystem.POINTS_SUBMITTED_PERFORMED == 50
+    assert ScoringSystem.POINTS_SUBMISSION == 10
+    assert ScoringSystem.MAX_SUBMISSIONS_PER_ROUND == 3
+
+def test_player_submission_limits():
+    """Test player submission tracking"""
+    from Model.player import Player
+    
+    player = Player('sid1', 'Alice')
+    
+    assert player.submissions_this_round == 0
+    assert player.can_submit_more() == True
+    
+    player.increment_submissions()
+    assert player.submissions_this_round == 1
+    assert player.can_submit_more() == True
+    
+    player.increment_submissions()
+    player.increment_submissions()
+    assert player.submissions_this_round == 3
+    assert player.can_submit_more() == False
+    
+    player.reset_round_submissions()
+    assert player.submissions_this_round == 0
+    assert player.can_submit_more() == True
+
+def test_truth_dare_with_submitter():
+    """Test truth/dare items track submitter"""
+    from Model.truth_dare import Truth, Dare
+    
+    truth = Truth('Custom truth?', is_default=False, submitted_by='Alice')
+    assert truth.submitted_by == 'Alice'
+    assert truth.to_dict()['submitted_by'] == 'Alice'
+    
+    dare = Dare('Custom dare', is_default=False, submitted_by='Bob')
+    assert dare.submitted_by == 'Bob'
+    assert dare.to_dict()['submitted_by'] == 'Bob'
+
+def test_round_record_creation():
+    """Test creating round records"""
+    from Model.round_record import RoundRecord
+    
+    record = RoundRecord(
+        round_number=1,
+        selected_player_name='Alice',
+        truth_dare_text='Do 10 pushups',
+        truth_dare_type='dare',
+        submitted_by='Bob'
+    )
+    
+    assert record.round_number == 1
+    assert record.selected_player_name == 'Alice'
+    assert record.truth_dare_text == 'Do 10 pushups'
+    assert record.truth_dare_type == 'dare'
+    assert record.submitted_by == 'Bob'
+    
+    record_dict = record.to_dict()
+    assert record_dict['round_number'] == 1
+    assert record_dict['selected_player'] == 'Alice'
+    assert record_dict['truth_dare']['text'] == 'Do 10 pushups'
+    assert record_dict['truth_dare']['type'] == 'dare'
+    assert record_dict['submitted_by'] == 'Bob'
+
+def test_room_round_history():
+    """Test room tracks round history"""
+    from Model.room import Room
+    from Model.round_record import RoundRecord
+    
+    room = Room('TEST')
+    
+    assert len(room.round_history) == 0
+    
+    record1 = RoundRecord(1, 'Alice', 'Tell a secret', 'truth', None)
+    record2 = RoundRecord(2, 'Bob', 'Dance', 'dare', 'Alice')
+    
+    room.add_round_record(record1)
+    room.add_round_record(record2)
+    
+    assert len(room.round_history) == 2
+    
+    history = room.get_round_history()
+    assert len(history) == 2
+    assert history[0]['round_number'] == 1
+    assert history[1]['round_number'] == 2
+
+def test_room_top_players():
+    """Test getting top players by score"""
+    from Model.room import Room
+    from Model.player import Player
+    
+    room = Room('TEST')
+    
+    alice = Player('sid1', 'Alice')
+    alice.score = 150
+    
+    bob = Player('sid2', 'Bob')
+    bob.score = 200
+    
+    charlie = Player('sid3', 'Charlie')
+    charlie.score = 100
+    
+    room.add_player(alice)
+    room.add_player(bob)
+    room.add_player(charlie)
+    
+    top_players = room.get_top_players(5)
+    
+    assert len(top_players) == 3
+    assert top_players[0]['name'] == 'Bob'
+    assert top_players[0]['score'] == 200
+    assert top_players[1]['name'] == 'Alice'
+    assert top_players[1]['score'] == 150
+    assert top_players[2]['name'] == 'Charlie'
+    assert top_players[2]['score'] == 100
+
+def test_game_state_round_tracking():
+    """Test game state tracks rounds"""
+    from Model.game_state import GameState
+    
+    state = GameState()
+    
+    assert state.current_round == 0
+    assert state.max_rounds == 10
+    assert state.should_end_game() == False
+    
+    # Simulate rounds
+    for i in range(10):
+        state.start_preparation()
+    
+    assert state.current_round == 10
+    assert state.should_end_game() == True
+
+def test_game_state_end_game_phase():
+    """Test game state end game phase"""
+    from Model.game_state import GameState
+    
+    state = GameState()
+    
+    state.start_end_game()
+    assert state.phase == GameState.PHASE_END_GAME
+    assert state.phase_end_time is None
+
+def test_room_reset_for_new_game():
+    """Test room resets properly for new game"""
+    from Model.room import Room
+    from Model.player import Player
+    from Model.round_record import RoundRecord
+    
+    room = Room('TEST')
+    
+    alice = Player('sid1', 'Alice')
+    alice.score = 150
+    alice.submissions_this_round = 2
+    
+    bob = Player('sid2', 'Bob')
+    bob.score = 200
+    bob.submissions_this_round = 3
+    
+    room.add_player(alice)
+    room.add_player(bob)
+    
+    # Add some round history
+    record = RoundRecord(1, 'Alice', 'Test', 'dare', None)
+    room.add_round_record(record)
+    
+    # Start game
+    room.game_state.start_countdown()
+    room.game_state.current_round = 5
+    
+    # Reset
+    room.reset_for_new_game()
+    
+    # Check everything is reset
+    assert alice.score == 0
+    assert bob.score == 0
+    assert alice.submissions_this_round == 0
+    assert bob.submissions_this_round == 0
+    assert len(room.round_history) == 0
+    assert room.game_state.current_round == 0
+    assert room.game_state.phase == 'countdown'
+
+def test_submission_with_limit():
+    """Test submission limit enforcement"""
+    game_manager.create_room()
+    room_code = list(game_manager.rooms.keys())[0]
+    
+    client1 = socketio.test_client(app)
+    client1.emit('join', {'room': room_code, 'name': 'Alice'})
+    
+    client2 = socketio.test_client(app)
+    client2.emit('join', {'room': room_code, 'name': 'Bob'})
+    
+    room = game_manager.get_room(room_code)
+    room.game_state.start_preparation()
+    
+    alice = room.get_player_by_name('Alice')
+    
+    # Submit 3 times (max limit)
+    for i in range(3):
+        client1.emit('submit_truth_dare', {
+            'room': room_code,
+            'text': f'Truth {i+1}',
+            'type': 'truth',
+            'targets': ['Bob']
+        })
+    
+    # Alice should have score from 3 submissions
+    assert alice.score == 30  # 3 * 10 points
+    assert alice.submissions_this_round == 3
+    
+    # Try to submit 4th time (should be rejected)
+    client1.emit('submit_truth_dare', {
+        'room': room_code,
+        'text': 'Truth 4',
+        'type': 'truth',
+        'targets': ['Bob']
+    })
+    
+    # Score should still be 30
+    assert alice.score == 30
+    assert alice.submissions_this_round == 3
+
+def test_room_default_settings_include_max_rounds():
+    """Test that room default settings include max_rounds"""
+    from Model.room import Room
+    
+    room = Room('TEST')
+    
+    assert 'max_rounds' in room.settings
+    assert room.settings['max_rounds'] == 10

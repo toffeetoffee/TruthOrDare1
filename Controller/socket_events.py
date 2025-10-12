@@ -3,6 +3,8 @@ from flask import request
 import threading
 import time
 import random
+from Model.scoring_system import ScoringSystem
+from Model.round_record import RoundRecord
 
 def register_socket_events(socketio, game_manager):
     """Register SocketIO event handlers"""
@@ -127,6 +129,10 @@ def register_socket_events(socketio, game_manager):
             if room:
                 prep_duration = room.settings['preparation_duration']
                 room.game_state.start_preparation(duration=prep_duration)
+                
+                # Reset player submission counters for new round
+                room.reset_player_round_submissions()
+                
                 socketio.emit('game_state_update', room.game_state.to_dict(), room=room_code, namespace='/')
                 
                 # Schedule selection phase after preparation
@@ -175,28 +181,70 @@ def register_socket_events(socketio, game_manager):
                                 room.game_state.start_truth_dare(duration=td_duration)
                                 socketio.emit('game_state_update', room.game_state.to_dict(), room=room_code, namespace='/')
                                 
-                                # Schedule back to preparation after truth/dare
-                                def back_to_preparation():
-                                    # Check timer dynamically instead of fixed sleep
+                                # Schedule end of truth/dare phase
+                                def end_truth_dare_phase():
+                                    # Check timer dynamically
                                     while True:
-                                        time.sleep(0.5)  # Check every 0.5 seconds
+                                        time.sleep(0.5)
                                         room = game_manager.get_room(room_code)
                                         if not room:
                                             break
                                         
                                         # Check if phase is complete
                                         if room.game_state.is_phase_complete():
-                                            prep_duration = room.settings['preparation_duration']
-                                            room.game_state.start_preparation(duration=prep_duration)
-                                            socketio.emit('game_state_update', room.game_state.to_dict(), room=room_code, namespace='/')
+                                            # Award points for performing
+                                            performer = room.get_player_by_name(room.game_state.selected_player)
+                                            if performer:
+                                                ScoringSystem.award_perform_points(performer)
                                             
-                                            # Continue the loop (selection -> truth/dare -> prep -> selection...)
-                                            start_selection()
+                                            # Award points to submitter if custom truth/dare
+                                            if room.game_state.current_truth_dare:
+                                                submitted_by = room.game_state.current_truth_dare.get('submitted_by')
+                                                if submitted_by:
+                                                    submitter = room.get_player_by_name(submitted_by)
+                                                    if submitter:
+                                                        ScoringSystem.award_submission_performed_points(submitter)
+                                            
+                                            # Record round history
+                                            if room.game_state.current_truth_dare:
+                                                round_record = RoundRecord(
+                                                    round_number=room.game_state.current_round,
+                                                    selected_player_name=room.game_state.selected_player,
+                                                    truth_dare_text=room.game_state.current_truth_dare['text'],
+                                                    truth_dare_type=room.game_state.current_truth_dare.get('type', room.game_state.selected_choice),
+                                                    submitted_by=room.game_state.current_truth_dare.get('submitted_by')
+                                                )
+                                                room.add_round_record(round_record)
+                                            
+                                            # Check if game should end
+                                            if room.game_state.should_end_game():
+                                                room.game_state.start_end_game()
+                                                
+                                                # Broadcast end game state with statistics
+                                                end_game_data = {
+                                                    'phase': 'end_game',
+                                                    'round_history': room.get_round_history(),
+                                                    'top_players': room.get_top_players(5),
+                                                    'all_players': [{'name': p.name, 'score': p.score} for p in room.players]
+                                                }
+                                                socketio.emit('game_state_update', end_game_data, room=room_code, namespace='/')
+                                            else:
+                                                # Continue to next round
+                                                prep_duration = room.settings['preparation_duration']
+                                                room.game_state.start_preparation(duration=prep_duration)
+                                                
+                                                # Reset player submission counters
+                                                room.reset_player_round_submissions()
+                                                
+                                                socketio.emit('game_state_update', room.game_state.to_dict(), room=room_code, namespace='/')
+                                                
+                                                # Continue the loop
+                                                start_selection()
                                             break
                                 
-                                prep_thread = threading.Thread(target=back_to_preparation)
-                                prep_thread.daemon = True
-                                prep_thread.start()
+                                td_end_thread = threading.Thread(target=end_truth_dare_phase)
+                                td_end_thread.daemon = True
+                                td_end_thread.start()
                         
                         td_thread = threading.Thread(target=start_truth_dare_phase)
                         td_thread.daemon = True
@@ -209,6 +257,34 @@ def register_socket_events(socketio, game_manager):
         thread = threading.Thread(target=start_preparation)
         thread.daemon = True
         thread.start()
+    
+    @socketio.on('restart_game')
+    def on_restart_game(data):
+        room_code = data.get('room')
+        
+        if not room_code:
+            return
+        
+        room = game_manager.get_room(room_code)
+        if not room:
+            return
+        
+        # Only host can restart
+        if not room.is_host(request.sid):
+            return
+        
+        # Reset room for new game
+        room.reset_for_new_game()
+        
+        # Start countdown immediately
+        countdown_duration = room.settings['countdown_duration']
+        room.game_state.start_countdown(duration=countdown_duration)
+        
+        # Broadcast reset state
+        emit('game_state_update', room.game_state.to_dict(), room=room_code)
+        
+        # Start game loop again
+        on_start_game({'room': room_code})
     
     @socketio.on('select_truth_dare')
     def on_select_truth_dare(data):
@@ -290,19 +366,35 @@ def register_socket_events(socketio, game_manager):
         if room.game_state.phase != 'preparation':
             return
         
-        # Add to each target player's list
+        # Get submitter
+        submitter = room.get_player_by_sid(request.sid)
+        if not submitter:
+            return
+        
+        # Check if player can submit more
+        if not submitter.can_submit_more():
+            emit('submission_error', {
+                'message': f'You can only submit {ScoringSystem.MAX_SUBMISSIONS_PER_ROUND} truths/dares per round'
+            }, to=request.sid)
+            return
+        
+        # Add to each target player's list with submitter info
         successfully_added = []
         for target_name in target_names:
             target_player = room.get_player_by_name(target_name)
             if target_player:
                 if item_type == 'truth':
-                    target_player.truth_dare_list.add_truth(text)
+                    target_player.truth_dare_list.add_truth(text, submitted_by=submitter.name)
                 elif item_type == 'dare':
-                    target_player.truth_dare_list.add_dare(text)
+                    target_player.truth_dare_list.add_dare(text, submitted_by=submitter.name)
                 successfully_added.append(target_name)
         
-        # Notify success
+        # Increment submission counter and award points
         if successfully_added:
+            submitter.increment_submissions()
+            ScoringSystem.award_submission_points(submitter)
+            
+            # Notify success
             emit('submission_success', {
                 'text': text,
                 'type': item_type,

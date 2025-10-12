@@ -23,21 +23,21 @@ class TruthDareList:
             
             # Add default truths
             for text in data['truths']:
-                self.truths.append(Truth(text, is_default=True))
+                self.truths.append(Truth(text, is_default=True, submitted_by=None))
             
             # Add default dares
             for text in data['dares']:
-                self.dares.append(Dare(text, is_default=True))
+                self.dares.append(Dare(text, is_default=True, submitted_by=None))
         except Exception as e:
             print(f"Warning: Could not load default truths/dares: {e}")
     
-    def add_truth(self, text):
+    def add_truth(self, text, submitted_by=None):
         """Add a custom truth"""
-        self.truths.append(Truth(text, is_default=False))
+        self.truths.append(Truth(text, is_default=False, submitted_by=submitted_by))
     
-    def add_dare(self, text):
+    def add_dare(self, text, submitted_by=None):
         """Add a custom dare"""
-        self.dares.append(Dare(text, is_default=False))
+        self.dares.append(Dare(text, is_default=False, submitted_by=submitted_by))
     
     def get_truths(self):
         """Get all truths as list of dicts"""

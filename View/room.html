@@ -397,6 +397,112 @@
       background: #6c757d;
       color: white;
     }
+    /* End Game Screen */
+    .end-game-section {
+      padding: 20px;
+      background: #d4edda;
+      border-radius: 8px;
+    }
+    .end-game-title {
+      text-align: center;
+      font-size: 32px;
+      font-weight: bold;
+      color: #155724;
+      margin-bottom: 30px;
+    }
+    .scoreboard {
+      background: white;
+      padding: 20px;
+      border-radius: 8px;
+      margin-bottom: 30px;
+    }
+    .scoreboard-title {
+      font-size: 24px;
+      font-weight: bold;
+      margin-bottom: 16px;
+      color: #333;
+    }
+    .top-player {
+      display: flex;
+      justify-content: space-between;
+      padding: 12px;
+      margin-bottom: 8px;
+      background: #f8f9fa;
+      border-radius: 6px;
+      border-left: 4px solid #ffc107;
+    }
+    .top-player:nth-child(2) {
+      border-left-color: #ffc107;
+      background: #fff3cd;
+    }
+    .top-player:nth-child(3) {
+      border-left-color: #c0c0c0;
+    }
+    .top-player:nth-child(4) {
+      border-left-color: #cd7f32;
+    }
+    .player-rank {
+      font-weight: bold;
+      color: #666;
+      margin-right: 12px;
+    }
+    .player-name-score {
+      flex: 1;
+      display: flex;
+      justify-content: space-between;
+    }
+    .player-score {
+      font-weight: bold;
+      color: #007bff;
+    }
+    .round-history {
+      background: white;
+      padding: 20px;
+      border-radius: 8px;
+      margin-bottom: 20px;
+      max-height: 400px;
+      overflow-y: auto;
+    }
+    .round-history-title {
+      font-size: 20px;
+      font-weight: bold;
+      margin-bottom: 16px;
+      color: #333;
+    }
+    .round-item {
+      padding: 12px;
+      margin-bottom: 12px;
+      background: #f8f9fa;
+      border-radius: 6px;
+      border-left: 4px solid #17a2b8;
+    }
+    .round-header {
+      font-weight: bold;
+      color: #495057;
+      margin-bottom: 6px;
+    }
+    .round-player {
+      color: #007bff;
+      font-weight: 500;
+    }
+    .round-challenge {
+      color: #6c757d;
+      font-style: italic;
+      margin-top: 6px;
+    }
+    .round-submitter {
+      font-size: 12px;
+      color: #6c757d;
+      margin-top: 4px;
+    }
+    .end-game-controls {
+      display: flex;
+      gap: 12px;
+    }
+    .btn-restart {
+      background: #28a745;
+      color: white;
+    }
   </style>
 </head>
 <body>
@@ -466,6 +572,12 @@
         <label class="settings-label">Skip Duration (seconds)</label>
         <input type="number" id="setting-skip" class="settings-input" min="3" max="30" value="5">
         <div class="settings-hint">Time remaining after vote skip (3-30 seconds)</div>
+      </div>
+      
+      <div class="settings-group">
+        <label class="settings-label">Maximum Rounds</label>
+        <input type="number" id="setting-maxrounds" class="settings-input" min="1" max="50" value="10">
+        <div class="settings-hint">Number of rounds before game ends (1-50)</div>
       </div>
       
       <div class="modal-buttons">
@@ -569,6 +681,41 @@
         </div>
       </div>
     </div>
+
+    <!-- End Game Phase -->
+    <div id="end-game-section" style="display: none;">
+      <div class="end-game-section">
+        <div class="end-game-title">🎉 Game Over! 🎉</div>
+        
+        <!-- Scoreboard -->
+        <div class="scoreboard">
+          <div class="scoreboard-title">Top Players</div>
+          <div id="top-players-list">
+            <!-- Dynamically populated -->
+          </div>
+        </div>
+        
+        <!-- Round History -->
+        <div class="round-history">
+          <div class="round-history-title">Round History</div>
+          <div id="round-history-list">
+            <!-- Dynamically populated -->
+          </div>
+        </div>
+        
+        <!-- Controls (host only) -->
+        <div id="end-game-host-controls" style="display: none;">
+          <div class="end-game-controls">
+            <button class="btn-settings" onclick="openSettings()">Settings</button>
+            <button class="btn-restart" onclick="restartGame()">Restart Game</button>
+          </div>
+        </div>
+        
+        <div class="button-group" style="margin-top: 20px;">
+          <button class="btn-leave" onclick="leaveRoom()">Leave Room</button>
+        </div>
+      </div>
+    </div>
   </div>
 
   <script src="https://cdn.socket.io/4.6.1/socket.io.min.js" crossorigin="anonymous"></script>
@@ -607,6 +754,7 @@
         document.getElementById('setting-selection').value = data.settings.selection_duration || 10;
         document.getElementById('setting-truthdare').value = data.settings.truth_dare_duration || 60;
         document.getElementById('setting-skip').value = data.settings.skip_duration || 5;
+        document.getElementById('setting-maxrounds').value = data.settings.max_rounds || 10;
       }
     });
 
@@ -684,7 +832,31 @@
 
     // Update game UI based on phase
     function updateGameUI() {
-      if (gameState.phase === 'countdown') {
+      if (gameState.phase === 'end_game') {
+        // Hide all other sections
+        lobbySection.classList.add('hide');
+        gameArea.classList.add('show');
+        document.getElementById('countdown-section').style.display = 'none';
+        document.getElementById('preparation-section').style.display = 'none';
+        document.getElementById('selection-section').style.display = 'none';
+        document.getElementById('truth-dare-section').style.display = 'none';
+        document.getElementById('end-game-section').style.display = 'block';
+        
+        // Show host controls if this user is the host
+        const endGameHostControls = document.getElementById('end-game-host-controls');
+        if (mySocketId === hostSocketId) {
+          endGameHostControls.style.display = 'block';
+        } else {
+          endGameHostControls.style.display = 'none';
+        }
+        
+        // Display top players
+        displayTopPlayers();
+        
+        // Display round history
+        displayRoundHistory();
+        
+      } else if (gameState.phase === 'countdown') {
         lobbySection.classList.add('hide');
         gameArea.classList.add('show');
         document.getElementById('countdown-section').style.display = 'block';
@@ -778,6 +950,67 @@
       }
     }
 
+    function displayTopPlayers() {
+      const topPlayersList = document.getElementById('top-players-list');
+      
+      if (!gameState.top_players || gameState.top_players.length === 0) {
+        topPlayersList.innerHTML = '<div style="color: #999; text-align: center;">No players</div>';
+        return;
+      }
+      
+      topPlayersList.innerHTML = gameState.top_players
+        .map((player, index) => {
+          const rank = index + 1;
+          const medal = rank === 1 ? '🥇' : rank === 2 ? '🥈' : rank === 3 ? '🥉' : '';
+          return `
+            <div class="top-player">
+              <span class="player-rank">${medal} #${rank}</span>
+              <div class="player-name-score">
+                <span>${escapeHtml(player.name)}</span>
+                <span class="player-score">${player.score} pts</span>
+              </div>
+            </div>
+          `;
+        })
+        .join('');
+    }
+
+    function displayRoundHistory() {
+      const roundHistoryList = document.getElementById('round-history-list');
+      
+      if (!gameState.round_history || gameState.round_history.length === 0) {
+        roundHistoryList.innerHTML = '<div style="color: #999; text-align: center;">No rounds played</div>';
+        return;
+      }
+      
+      // Reverse to show most recent first
+      const reversedHistory = [...gameState.round_history].reverse();
+      
+      roundHistoryList.innerHTML = reversedHistory
+        .map(round => {
+          const submitterText = round.submitted_by 
+            ? `<div class="round-submitter">Submitted by: ${escapeHtml(round.submitted_by)}</div>`
+            : '<div class="round-submitter">Default challenge</div>';
+          
+          return `
+            <div class="round-item">
+              <div class="round-header">
+                Round ${round.round_number}
+              </div>
+              <div>
+                <span class="round-player">${escapeHtml(round.selected_player)}</span>
+                performed a <strong>${round.truth_dare.type}</strong>
+              </div>
+              <div class="round-challenge">
+                "${escapeHtml(round.truth_dare.text)}"
+              </div>
+              ${submitterText}
+            </div>
+          `;
+        })
+        .join('');
+    }
+
     function startCountdownTimer() {
       clearInterval(timerInterval);
       timerInterval = setInterval(() => {
@@ -861,7 +1094,8 @@
         preparation_duration: parseInt(document.getElementById('setting-preparation').value),
         selection_duration: parseInt(document.getElementById('setting-selection').value),
         truth_dare_duration: parseInt(document.getElementById('setting-truthdare').value),
-        skip_duration: parseInt(document.getElementById('setting-skip').value)
+        skip_duration: parseInt(document.getElementById('setting-skip').value),
+        max_rounds: parseInt(document.getElementById('setting-maxrounds').value)
       };
       
       // Validate settings
@@ -885,6 +1119,10 @@
         alert('Skip duration must be between 3 and 30 seconds');
         return;
       }
+      if (settings.max_rounds < 1 || settings.max_rounds > 50) {
+        alert('Maximum rounds must be between 1 and 50');
+        return;
+      }
       
       socket.emit('update_settings', {
         room: ROOM,
@@ -897,6 +1135,12 @@
     function startGame() {
       startButton.disabled = true;
       socket.emit('start_game', { room: ROOM });
+    }
+
+    function restartGame() {
+      if (confirm('Are you sure you want to restart the game? All scores will be reset.')) {
+        socket.emit('restart_game', { room: ROOM });
+      }
     }
 
     function selectAllPlayers() {
