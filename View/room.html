@@ -80,6 +80,19 @@
         <input type="number" id="setting-maxrounds" class="settings-input" min="1" max="50" value="10">
         <div class="settings-hint">Number of rounds before game ends (1-50)</div>
       </div>
+
+      <!-- Minigame settings -->
+      <div class="settings-group">
+        <label class="settings-label">Minigame Chance (%)</label>
+        <input type="number" id="setting-minigame-chance" class="settings-input" min="0" max="100" step="0.1" value="20">
+        <div class="settings-hint">Chance that a minigame triggers after preparation (0-100%). Default 20%.</div>
+      </div>
+
+      <div class="settings-group">
+        <label class="settings-label">Minigame Duration (seconds)</label>
+        <input type="number" id="setting-minigame-duration" class="settings-input" min="5" max="120" value="15">
+        <div class="settings-hint">Duration of the staring contest voting phase (5-120 seconds).</div>
+      </div>
       
       <div class="modal-buttons">
         <button class="btn-save" onclick="saveSettings()">Save Settings</button>
@@ -126,6 +139,32 @@
           <button onclick="submitTruthDare()">Submit</button>
           
           <div id="submission-success" class="submission-success"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Minigame Phase: Staring Contest -->
+    <div id="minigame-section" style="display: none;">
+      <div class="minigame-phase">
+        <div class="minigame-header">
+          <h2>Staring Contest (Minigame)</h2>
+          <div class="minigame-instructions">Non-competing players vote who they think will win. After majority, the other competitor loses and will perform next.</div>
+        </div>
+
+        <div class="minigame-competitors">
+          <div class="competitor" id="minigame-competitor-a">Competitor A</div>
+          <div class="versus">vs</div>
+          <div class="competitor" id="minigame-competitor-b">Competitor B</div>
+        </div>
+
+        <div id="minigame-vote-buttons" class="minigame-vote-buttons" style="display:none;">
+          <button id="minigame-btn-a" class="btn-vote" onclick="voteMinigame(document.getElementById('minigame-competitor-a').textContent)">Vote for A</button>
+          <button id="minigame-btn-b" class="btn-vote" onclick="voteMinigame(document.getElementById('minigame-competitor-b').textContent)">Vote for B</button>
+        </div>
+
+        <div class="minigame-votes-display">
+          <div>Votes: <span id="minigame-vote-count-a">0</span> - <span id="minigame-vote-count-b">0</span></div>
+          <div class="minigame-timer-hint">Voting time left shown in the preparation timer area above.</div>
         </div>
       </div>
     </div>

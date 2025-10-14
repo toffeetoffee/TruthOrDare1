@@ -34,6 +34,11 @@ socket.on('settings_updated', (data) => {
     document.getElementById('setting-truthdare').value = data.settings.truth_dare_duration || 60;
     document.getElementById('setting-skip').value = data.settings.skip_duration || 5;
     document.getElementById('setting-maxrounds').value = data.settings.max_rounds || 10;
+    // minigame settings
+    const minChanceInput = document.getElementById('setting-minigame-chance');
+    const minDurInput = document.getElementById('setting-minigame-duration');
+    if (minChanceInput) minChanceInput.value = data.settings.minigame_chance ?? 20;
+    if (minDurInput) minDurInput.value = data.settings.minigame_duration ?? 15;
   }
 });
 
@@ -127,6 +132,7 @@ function updateGameUI() {
   document.getElementById('preparation-section').style.display = 'none';
   document.getElementById('selection-section').style.display = 'none';
   document.getElementById('truth-dare-section').style.display = 'none';
+  document.getElementById('minigame-section') && (document.getElementById('minigame-section').style.display = 'none');
   document.getElementById('end-game-section').style.display = 'none';
   
   if (gameState.phase === 'end_game') {
@@ -164,6 +170,42 @@ function updateGameUI() {
     // Update preparation timer
     startPreparationTimer();
     
+  } else if (gameState.phase === 'minigame') {
+    // New: minigame (staring contest)
+    lobbySection.classList.add('hide');
+    gameArea.classList.add('show');
+    const minigameSection = document.getElementById('minigame-section');
+    if (minigameSection) minigameSection.style.display = 'block';
+    
+    // show competitors
+    const compElA = document.getElementById('minigame-competitor-a');
+    const compElB = document.getElementById('minigame-competitor-b');
+    const voteButtons = document.getElementById('minigame-vote-buttons');
+    const voteCountsA = document.getElementById('minigame-vote-count-a');
+    const voteCountsB = document.getElementById('minigame-vote-count-b');
+    
+    const comps = gameState.minigame_competitors || [];
+    const a = comps[0] || '';
+    const b = comps[1] || '';
+    if (compElA) compElA.textContent = a;
+    if (compElB) compElB.textContent = b;
+    
+    // vote counts
+    const counts = gameState.minigame_vote_counts || {};
+    if (voteCountsA) voteCountsA.textContent = counts[a] || 0;
+    if (voteCountsB) voteCountsB.textContent = counts[b] || 0;
+    
+    // Show vote buttons only to non-competing players
+    const isCompeting = (PLAYER_NAME === a || PLAYER_NAME === b);
+    if (!isCompeting && voteButtons) {
+      voteButtons.style.display = 'flex';
+      // enable reset / allow voting changes
+    } else if (voteButtons) {
+      voteButtons.style.display = 'none';
+    }
+    
+    // Update minigame timer
+    startPreparationTimer(); // re-use preparation timer display element or make your own
   } else if (gameState.phase === 'selection') {
     lobbySection.classList.add('hide');
     gameArea.classList.add('show');
@@ -242,6 +284,14 @@ function updateGameUI() {
     lobbySection.classList.remove('hide');
     gameArea.classList.remove('show');
   }
+}
+
+function voteMinigame(competitorName) {
+  const btnA = document.getElementById('minigame-btn-a');
+  const btnB = document.getElementById('minigame-btn-b');
+  if (btnA) btnA.disabled = true;
+  if (btnB) btnB.disabled = true;
+  socket.emit('minigame_vote', { room: ROOM_CODE, competitor: competitorName });
 }
 
 function displayTopPlayers() {
@@ -378,7 +428,10 @@ function saveSettings() {
     selection_duration: parseInt(document.getElementById('setting-selection').value),
     truth_dare_duration: parseInt(document.getElementById('setting-truthdare').value),
     skip_duration: parseInt(document.getElementById('setting-skip').value),
-    max_rounds: parseInt(document.getElementById('setting-maxrounds').value)
+    max_rounds: parseInt(document.getElementById('setting-maxrounds').value),
+    // minigame settings
+    minigame_chance: parseFloat(document.getElementById('setting-minigame-chance').value),
+    minigame_duration: parseInt(document.getElementById('setting-minigame-duration').value)
   };
   
   // Validate settings
@@ -404,6 +457,14 @@ function saveSettings() {
   }
   if (settings.max_rounds < 1 || settings.max_rounds > 50) {
     alert('Maximum rounds must be between 1 and 50');
+    return;
+  }
+  if (settings.minigame_chance < 0 || settings.minigame_chance > 100) {
+    alert('Minigame chance must be between 0 and 100');
+    return;
+  }
+  if (settings.minigame_duration < 5 || settings.minigame_duration > 120) {
+    alert('Minigame duration must be between 5 and 120 seconds');
     return;
   }
   

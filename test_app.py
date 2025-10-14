@@ -3,6 +3,7 @@ import time
 from app import app, socketio, game_manager
 from Model.truth_dare_list import TruthDareList
 from Model.game_state import GameState
+from Model.scoring_system import ScoringSystem
 
 @pytest.fixture
 def client():
@@ -944,3 +945,112 @@ def test_room_default_settings_include_max_rounds():
     
     assert 'max_rounds' in room.settings
     assert room.settings['max_rounds'] == 10
+    
+def test_update_minigame_settings_and_join():
+    """
+    Host should be able to update minigame settings and players can join via socket.
+    Verifies the setting was saved and player list updates.
+    """
+    code = game_manager.create_room()
+    # create two socket test clients
+    c_host = socketio.test_client(app)
+    c_other = socketio.test_client(app)
+
+    # Host joins (becomes host)
+    c_host.emit('join', {'room': code, 'name': 'HostPlayer'})
+    received = c_host.get_received()
+    # room should exist and have host player
+    room = game_manager.get_room(code)
+    assert room is not None, "Room should exist after host join"
+    assert any(p.name == 'HostPlayer' for p in room.players), "HostPlayer should be in room players"
+
+    # Host updates minigame chance to 100% to force minigame
+    c_host.emit('update_settings', {'room': code, 'settings': {'minigame_chance': 100, 'minigame_duration': 2}})
+    # The server sends 'settings_updated' to room; pick up updated state from server-side room
+    room_after = game_manager.get_room(code)
+    assert float(room_after.settings.get('minigame_chance', 0)) == 100.0, "Minigame chance should have been updated to 100"
+    assert int(room_after.settings.get('minigame_duration', 0)) == 2, "Minigame duration should have been updated to 2 seconds"
+
+    # Another player joins
+    c_other.emit('join', {'room': code, 'name': 'OtherPlayer'})
+    room2 = game_manager.get_room(code)
+    names = [p.name for p in room2.players]
+    assert 'OtherPlayer' in names, "OtherPlayer should have joined the room"
+
+    # cleanup
+    c_host.disconnect()
+    c_other.disconnect()
+
+
+def test_minigame_vote_flow():
+    """
+    Simulate a minigame starting between PlayerA and PlayerB with PlayerC as voter.
+    - Create room and have three clients join: A, B, C
+    - Force a minigame by setting game_state to PHASE_MINIGAME
+    - Have C vote for A; required_votes is 1 (only one non-competing voter),
+      so the vote should immediately resolve: both participants get minigame points
+      and the selected player should be set to the loser (B).
+    """
+    code = game_manager.create_room()
+
+    # Create three socket clients (they will receive SIDs used by server)
+    client_a = socketio.test_client(app)
+    client_b = socketio.test_client(app)
+    client_c = socketio.test_client(app)
+
+    # Join as players A, B, C respectively
+    client_a.emit('join', {'room': code, 'name': 'PlayerA'})
+    client_b.emit('join', {'room': code, 'name': 'PlayerB'})
+    client_c.emit('join', {'room': code, 'name': 'PlayerC'})
+
+    room = game_manager.get_room(code)
+    assert room is not None, "Room should exist after clients join"
+    assert len(room.players) == 3, f"Expected 3 players, found {len(room.players)}"
+
+    # Start minigame manually on server-side (simulate what server would do)
+    # Competitors are PlayerA and PlayerB; duration small for test
+    comp_names = ['PlayerA', 'PlayerB']
+    room.game_state.start_minigame(competitors=comp_names, duration=5)
+
+    # Ensure phase set properly
+    assert room.game_state.phase == room.game_state.PHASE_MINIGAME, "GameState should be in minigame phase"
+
+    # Pre-check scores are zero
+    pa = room.get_player_by_name('PlayerA')
+    pb = room.get_player_by_name('PlayerB')
+    pc = room.get_player_by_name('PlayerC')
+    assert pa is not None and pb is not None and pc is not None, "All players should be present"
+
+    pa.score = 0
+    pb.score = 0
+    pc.score = 0
+
+    # PlayerC votes for PlayerA
+    client_c.emit('minigame_vote', {'room': code, 'competitor': 'PlayerA'})
+
+    # Because only one non-competing voter exists, required_votes == 1,
+    # the handler should immediately resolve the minigame:
+    # - both participants earn minigame points
+    # - selected_player should be set to the losing competitor (PlayerB)
+    # - phase should have transitioned to 'selection'
+    # Allow a tiny sleep to ensure server-side handler executed
+    time.sleep(0.05)
+
+    # Refresh room object
+    room_after = game_manager.get_room(code)
+    assert room_after is not None, "Room should still exist"
+
+    # Check that both participants received minigame points
+    pa_after = room_after.get_player_by_name('PlayerA')
+    pb_after = room_after.get_player_by_name('PlayerB')
+    assert pa_after.score == ScoringSystem.POINTS_MINIGAME, f"PlayerA should have {ScoringSystem.POINTS_MINIGAME} points"
+    assert pb_after.score == ScoringSystem.POINTS_MINIGAME, f"PlayerB should have {ScoringSystem.POINTS_MINIGAME} points"
+
+    # Check selected player set to loser (PlayerB) and phase moved to selection
+    assert room_after.game_state.phase == room_after.game_state.PHASE_SELECTION, "Game should have transitioned to selection phase"
+    assert room_after.game_state.selected_player == 'PlayerB', f"Selected player should be PlayerB (the loser). Got {room_after.game_state.selected_player}"
+
+    # Cleanup / disconnect clients
+    client_a.disconnect()
+    client_b.disconnect()
+    client_c.disconnect()
