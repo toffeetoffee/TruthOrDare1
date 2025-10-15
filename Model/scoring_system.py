@@ -4,7 +4,6 @@ class ScoringSystem:
     # Point values (highest to lowest)
     POINTS_PERFORM = 100  # Performing a truth/dare
     POINTS_SUBMITTED_PERFORMED = 50  # Your submission gets performed
-    POINTS_MINIGAME = POINTS_SUBMITTED_PERFORMED  # Staring-contest reward (second-highest)
     POINTS_SUBMISSION = 10  # Submitting a truth/dare
     
     # Limits
@@ -19,11 +18,6 @@ class ScoringSystem:
     def award_submission_performed_points(player):
         """Award points when your submission is performed"""
         player.add_score(ScoringSystem.POINTS_SUBMITTED_PERFORMED)
-    
-    @staticmethod
-    def award_minigame_points(player):
-        """Award points for participating (staring-contest)"""
-        player.add_score(ScoringSystem.POINTS_MINIGAME)
     
     @staticmethod
     def award_submission_points(player):

@@ -1,6 +1,5 @@
 from Model.player import Player
 from Model.game_state import GameState
-from Model.truth_dare_list import TruthDareList
 
 class Room:
     """Represents a game room"""
@@ -19,37 +18,18 @@ class Room:
             'selection_duration': 10,
             'truth_dare_duration': 60,
             'skip_duration': 5,
-            'max_rounds': 10,
-            # minigame settings
-            'minigame_chance': 20,     # percent chance (0-100)
-            'minigame_duration': 15    # seconds
+            'max_rounds': 10
         }
     
     def update_settings(self, new_settings):
         """Update room settings"""
         for key, value in new_settings.items():
             if key in self.settings:
-                # allow float for chance as well (store as int)
-                if key == 'minigame_chance':
-                    # clamp between 0 and 100
-                    try:
-                        v = float(value)
-                        v = max(0.0, min(100.0, v))
-                        self.settings[key] = v
-                    except Exception:
-                        continue
-                else:
-                    try:
-                        self.settings[key] = int(value)
-                    except Exception:
-                        continue
+                self.settings[key] = int(value)
         
         # Update game state max_rounds if changed
         if 'max_rounds' in new_settings:
-            try:
-                self.game_state.max_rounds = int(new_settings['max_rounds'])
-            except Exception:
-                pass
+            self.game_state.max_rounds = int(new_settings['max_rounds'])
     
     def add_player(self, player):
         """Add a player to the room"""
@@ -133,6 +113,5 @@ class Room:
         """Convert room to dictionary format (for backward compatibility)"""
         return {
             'host_sid': self.host_sid,
-            'players': [p.to_dict() for p in self.players],
-            'settings': self.settings
+            'players': [p.to_dict() for p in self.players]
         }
