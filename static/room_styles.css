@@ -593,3 +593,116 @@ button:disabled {
   background: #28a745;
   color: white;
 }
+
+/* Minigame Styles */
+.minigame-phase {
+  padding: 30px 20px;
+  background: #fff3cd;
+  border-radius: 8px;
+  text-align: center;
+}
+
+.minigame-title {
+  font-size: 32px;
+  font-weight: bold;
+  color: #856404;
+  margin-bottom: 15px;
+}
+
+.minigame-description {
+  font-size: 18px;
+  color: #666;
+  margin-bottom: 30px;
+}
+
+.minigame-participants {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 30px;
+  margin-bottom: 30px;
+}
+
+.participant-card {
+  background: white;
+  padding: 30px 40px;
+  border-radius: 12px;
+  box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+  min-width: 150px;
+}
+
+.participant-name {
+  font-size: 24px;
+  font-weight: bold;
+  color: #333;
+}
+
+.vs-text {
+  font-size: 28px;
+  font-weight: bold;
+  color: #dc3545;
+}
+
+.minigame-voting {
+  background: white;
+  padding: 25px;
+  border-radius: 8px;
+  margin-top: 20px;
+}
+
+.voting-instruction {
+  font-size: 18px;
+  font-weight: 500;
+  color: #333;
+  margin-bottom: 20px;
+}
+
+.voting-buttons {
+  display: flex;
+  gap: 15px;
+  justify-content: center;
+  margin-bottom: 15px;
+}
+
+.vote-btn {
+  flex: 1;
+  max-width: 250px;
+  padding: 15px 20px;
+  background: #007bff;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-size: 16px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.vote-btn:hover {
+  background: #0056b3;
+  transform: translateY(-2px);
+}
+
+.vote-btn:disabled {
+  background: #6c757d;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.vote-progress {
+  font-size: 16px;
+  color: #666;
+}
+
+.minigame-participant-message {
+  background: #e7f3ff;
+  padding: 25px;
+  border-radius: 8px;
+  margin-top: 20px;
+}
+
+.minigame-participant-message p {
+  font-size: 18px;
+  color: #004085;
+  margin: 10px 0;
+}

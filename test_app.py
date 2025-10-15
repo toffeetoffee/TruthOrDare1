@@ -944,3 +944,214 @@ def test_room_default_settings_include_max_rounds():
     
     assert 'max_rounds' in room.settings
     assert room.settings['max_rounds'] == 10
+
+# === Minigame Tests ===
+
+def test_minigame_creation():
+    """Test creating a staring contest minigame"""
+    from Model.minigame import StaringContest
+    from Model.player import Player
+    
+    minigame = StaringContest()
+    
+    player1 = Player('sid1', 'Alice')
+    player2 = Player('sid2', 'Bob')
+    
+    minigame.add_participant(player1)
+    minigame.add_participant(player2)
+    
+    assert len(minigame.participants) == 2
+    assert minigame.get_participant_names() == ['Alice', 'Bob']
+
+def test_minigame_voting():
+    """Test minigame voting system"""
+    from Model.minigame import StaringContest
+    from Model.player import Player
+    
+    minigame = StaringContest()
+    
+    alice = Player('sid1', 'Alice')
+    bob = Player('sid2', 'Bob')
+    
+    minigame.add_participant(alice)
+    minigame.add_participant(bob)
+    
+    # Players vote (3 voters total)
+    minigame.add_vote('voter1', 'Alice')
+    minigame.add_vote('voter2', 'Alice')
+    
+    assert len(minigame.votes) == 2
+    assert minigame.check_voting_complete(3) == True  # 2 out of 3 is majority
+
+def test_minigame_determine_loser():
+    """Test determining the loser of a minigame"""
+    from Model.minigame import StaringContest
+    from Model.player import Player
+    
+    minigame = StaringContest()
+    
+    alice = Player('sid1', 'Alice')
+    bob = Player('sid2', 'Bob')
+    
+    minigame.add_participant(alice)
+    minigame.add_participant(bob)
+    
+    # Vote for Alice as loser
+    minigame.add_vote('voter1', 'Alice')
+    minigame.add_vote('voter2', 'Alice')
+    minigame.add_vote('voter3', 'Bob')
+    
+    loser = minigame.determine_loser()
+    
+    assert loser == alice
+    assert minigame.loser == alice
+    assert minigame.winner == bob
+    assert minigame.is_complete == True
+
+def test_minigame_participation_points():
+    """Test that minigame participants get points"""
+    from Model.scoring_system import ScoringSystem
+    from Model.player import Player
+    
+    player = Player('sid1', 'Alice')
+    
+    initial_score = player.score
+    ScoringSystem.award_minigame_participate_points(player)
+    
+    assert player.score == initial_score + 75
+    assert player.score == ScoringSystem.POINTS_MINIGAME_PARTICIPATE
+
+def test_scoring_system_minigame_points():
+    """Test that scoring system has minigame points defined"""
+    from Model.scoring_system import ScoringSystem
+    
+    assert hasattr(ScoringSystem, 'POINTS_MINIGAME_PARTICIPATE')
+    assert ScoringSystem.POINTS_MINIGAME_PARTICIPATE == 75
+    # Verify order: perform > minigame > submission_performed > submission
+    assert ScoringSystem.POINTS_PERFORM > ScoringSystem.POINTS_MINIGAME_PARTICIPATE
+    assert ScoringSystem.POINTS_MINIGAME_PARTICIPATE > ScoringSystem.POINTS_SUBMITTED_PERFORMED
+
+def test_game_state_minigame_phase():
+    """Test game state minigame phase"""
+    from Model.game_state import GameState
+    
+    state = GameState()
+    
+    assert hasattr(state, 'PHASE_MINIGAME')
+    assert state.PHASE_MINIGAME == 'minigame'
+    
+    state.start_minigame()
+    assert state.phase == 'minigame'
+    assert state.phase_end_time is None  # No time limit
+
+def test_game_state_tracks_minigame():
+    """Test that game state can track a minigame"""
+    from Model.game_state import GameState
+    from Model.minigame import StaringContest
+    from Model.player import Player
+    
+    state = GameState()
+    minigame = StaringContest()
+    
+    player1 = Player('sid1', 'Alice')
+    player2 = Player('sid2', 'Bob')
+    
+    minigame.add_participant(player1)
+    minigame.add_participant(player2)
+    
+    state.set_minigame(minigame)
+    
+    assert state.minigame == minigame
+    
+    # Check to_dict includes minigame
+    state_dict = state.to_dict()
+    assert 'minigame' in state_dict
+    assert state_dict['minigame']['type'] == 'staring_contest'
+
+def test_room_minigame_chance_setting():
+    """Test that room has minigame_chance setting"""
+    from Model.room import Room
+    
+    room = Room('TEST')
+    
+    assert 'minigame_chance' in room.settings
+    assert room.settings['minigame_chance'] == 20  # Default 20%
+
+def test_minigame_to_dict():
+    """Test minigame serialization"""
+    from Model.minigame import StaringContest
+    from Model.player import Player
+    
+    minigame = StaringContest()
+    
+    alice = Player('sid1', 'Alice')
+    bob = Player('sid2', 'Bob')
+    
+    minigame.add_participant(alice)
+    minigame.add_participant(bob)
+    minigame.add_vote('voter1', 'Alice')
+    
+    minigame_dict = minigame.to_dict()
+    
+    assert minigame_dict['type'] == 'staring_contest'
+    assert minigame_dict['participants'] == ['Alice', 'Bob']
+    assert minigame_dict['vote_count'] == 1
+    assert minigame_dict['is_complete'] == False
+
+def test_minigame_voting_incomplete():
+    """Test that voting is incomplete without majority"""
+    from Model.minigame import StaringContest
+    from Model.player import Player
+    
+    minigame = StaringContest()
+    
+    alice = Player('sid1', 'Alice')
+    bob = Player('sid2', 'Bob')
+    
+    minigame.add_participant(alice)
+    minigame.add_participant(bob)
+    
+    # Only 1 vote out of 4 non-participants
+    minigame.add_vote('voter1', 'Alice')
+    
+    assert minigame.check_voting_complete(4) == False  # Need 3 votes for majority
+
+def test_minigame_voting_exact_majority():
+    """Test voting with exact majority"""
+    from Model.minigame import StaringContest
+    from Model.player import Player
+    
+    minigame = StaringContest()
+    
+    alice = Player('sid1', 'Alice')
+    bob = Player('sid2', 'Bob')
+    
+    minigame.add_participant(alice)
+    minigame.add_participant(bob)
+    
+    # 2 votes out of 3 non-participants (exact majority)
+    minigame.add_vote('voter1', 'Alice')
+    minigame.add_vote('voter2', 'Alice')
+    
+    assert minigame.check_voting_complete(3) == True
+
+def test_host_can_update_minigame_chance():
+    """Test that host can update minigame chance setting"""
+    game_manager.create_room()
+    room_code = list(game_manager.rooms.keys())[0]
+    
+    client1 = socketio.test_client(app)
+    client1.emit('join', {'room': room_code, 'name': 'Alice'})
+    
+    room = game_manager.get_room(room_code)
+    
+    # Alice (host) updates minigame chance
+    client1.emit('update_settings', {
+        'room': room_code,
+        'settings': {
+            'minigame_chance': 50
+        }
+    })
+    
+    # Setting should be updated
+    assert room.settings['minigame_chance'] == 50

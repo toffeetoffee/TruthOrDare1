@@ -34,6 +34,7 @@ socket.on('settings_updated', (data) => {
     document.getElementById('setting-truthdare').value = data.settings.truth_dare_duration || 60;
     document.getElementById('setting-skip').value = data.settings.skip_duration || 5;
     document.getElementById('setting-maxrounds').value = data.settings.max_rounds || 10;
+    document.getElementById('setting-minigame').value = data.settings.minigame_chance || 20;
   }
 });
 
@@ -126,6 +127,7 @@ function updateGameUI() {
   document.getElementById('countdown-section').style.display = 'none';
   document.getElementById('preparation-section').style.display = 'none';
   document.getElementById('selection-section').style.display = 'none';
+  document.getElementById('minigame-section').style.display = 'none';
   document.getElementById('truth-dare-section').style.display = 'none';
   document.getElementById('end-game-section').style.display = 'none';
   
@@ -147,6 +149,50 @@ function updateGameUI() {
     
     // Display round history
     displayRoundHistory();
+    
+  } else if (gameState.phase === 'minigame') {
+    lobbySection.classList.add('hide');
+    gameArea.classList.add('show');
+    document.getElementById('minigame-section').style.display = 'block';
+    
+    // Update minigame UI
+    if (gameState.minigame) {
+      const participants = gameState.minigame.participants;
+      
+      // Display participant names
+      document.getElementById('participant-1').textContent = participants[0] || 'Player 1';
+      document.getElementById('participant-2').textContent = participants[1] || 'Player 2';
+      
+      // Check if current player is a participant
+      const isParticipant = participants.includes(PLAYER_NAME);
+      
+      if (isParticipant) {
+        // Show participant message
+        document.getElementById('minigame-voting').style.display = 'none';
+        document.getElementById('minigame-participant-message').style.display = 'block';
+      } else {
+        // Show voting buttons
+        document.getElementById('minigame-voting').style.display = 'block';
+        document.getElementById('minigame-participant-message').style.display = 'none';
+        
+        // Update button onclick handlers
+        document.getElementById('vote-name-1').textContent = participants[0] || 'Player 1';
+        document.getElementById('vote-name-2').textContent = participants[1] || 'Player 2';
+        
+        const btn1 = document.getElementById('vote-btn-1');
+        const btn2 = document.getElementById('vote-btn-2');
+        
+        btn1.onclick = () => voteMinigame(participants[0]);
+        btn2.onclick = () => voteMinigame(participants[1]);
+        
+        // Update vote count
+        const totalPlayers = playerList.children.length;
+        const requiredVotes = Math.ceil((totalPlayers - 2) / 2);
+        
+        document.getElementById('minigame-vote-count').textContent = gameState.minigame.vote_count || 0;
+        document.getElementById('minigame-required-votes').textContent = requiredVotes;
+      }
+    }
     
   } else if (gameState.phase === 'countdown') {
     lobbySection.classList.add('hide');
@@ -378,7 +424,8 @@ function saveSettings() {
     selection_duration: parseInt(document.getElementById('setting-selection').value),
     truth_dare_duration: parseInt(document.getElementById('setting-truthdare').value),
     skip_duration: parseInt(document.getElementById('setting-skip').value),
-    max_rounds: parseInt(document.getElementById('setting-maxrounds').value)
+    max_rounds: parseInt(document.getElementById('setting-maxrounds').value),
+    minigame_chance: parseInt(document.getElementById('setting-minigame').value)
   };
   
   // Validate settings
@@ -406,6 +453,10 @@ function saveSettings() {
     alert('Maximum rounds must be between 1 and 50');
     return;
   }
+  if (settings.minigame_chance < 0 || settings.minigame_chance > 100) {
+    alert('Minigame chance must be between 0 and 100%');
+    return;
+  }
   
   socket.emit('update_settings', {
     room: ROOM_CODE,
@@ -424,6 +475,19 @@ function restartGame() {
   if (confirm('Are you sure you want to restart the game? All scores will be reset.')) {
     socket.emit('restart_game', { room: ROOM_CODE });
   }
+}
+
+function voteMinigame(playerName) {
+  if (!playerName) return;
+  
+  // Disable both buttons after voting
+  document.getElementById('vote-btn-1').disabled = true;
+  document.getElementById('vote-btn-2').disabled = true;
+  
+  socket.emit('minigame_vote', {
+    room: ROOM_CODE,
+    voted_player: playerName
+  });
 }
 
 function selectAllPlayers() {

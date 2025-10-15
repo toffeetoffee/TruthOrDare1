@@ -81,6 +81,12 @@
         <div class="settings-hint">Number of rounds before game ends (1-50)</div>
       </div>
       
+      <div class="settings-group">
+        <label class="settings-label">Minigame Chance (%)</label>
+        <input type="number" id="setting-minigame" class="settings-input" min="0" max="100" value="20">
+        <div class="settings-hint">Chance of triggering a minigame (0-100%)</div>
+      </div>
+      
       <div class="modal-buttons">
         <button class="btn-save" onclick="saveSettings()">Save Settings</button>
         <button class="btn-cancel" onclick="closeSettings()">Cancel</button>
@@ -149,6 +155,49 @@
         
         <div id="choice-made" style="margin-top: 20px; font-size: 18px; color: #666; text-align: center; display: none;">
           Choice: <span id="choice-display"></span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Minigame Phase -->
+    <div id="minigame-section" style="display: none;">
+      <div class="minigame-phase">
+        <div class="minigame-title">🎮 Staring Contest! 🎮</div>
+        
+        <div class="minigame-description">
+          Who will blink first?
+        </div>
+        
+        <div class="minigame-participants">
+          <div class="participant-card">
+            <div class="participant-name" id="participant-1">Player 1</div>
+          </div>
+          <div class="vs-text">VS</div>
+          <div class="participant-card">
+            <div class="participant-name" id="participant-2">Player 2</div>
+          </div>
+        </div>
+        
+        <!-- Voting buttons (only for non-participants) -->
+        <div id="minigame-voting" class="minigame-voting" style="display: none;">
+          <div class="voting-instruction">Vote for who blinked first:</div>
+          <div class="voting-buttons">
+            <button class="vote-btn" id="vote-btn-1" onclick="voteMinigame(null)">
+              <span id="vote-name-1">Player 1</span> blinked!
+            </button>
+            <button class="vote-btn" id="vote-btn-2" onclick="voteMinigame(null)">
+              <span id="vote-name-2">Player 2</span> blinked!
+            </button>
+          </div>
+          <div class="vote-progress">
+            Votes: <span id="minigame-vote-count">0</span> / <span id="minigame-required-votes">?</span>
+          </div>
+        </div>
+        
+        <!-- For participants -->
+        <div id="minigame-participant-message" class="minigame-participant-message" style="display: none;">
+          <p>You are competing! Don't blink! 👀</p>
+          <p>Other players will vote for who blinked first.</p>
         </div>
       </div>
     </div>

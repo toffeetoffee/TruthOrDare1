@@ -18,7 +18,8 @@ class Room:
             'selection_duration': 10,
             'truth_dare_duration': 60,
             'skip_duration': 5,
-            'max_rounds': 10
+            'max_rounds': 10,
+            'minigame_chance': 20  # Percentage (0-100)
         }
     
     def update_settings(self, new_settings):
