@@ -187,10 +187,8 @@ def register_socket_events(socketio, game_manager):
                                         
                                         socketio.emit('game_state_update', room.game_state.to_dict(), room=room_code, namespace='/')
                                         
-                                        # Continue to truth/dare phase in a thread
-                                        td_thread = threading.Thread(target=start_truth_dare_phase)
-                                        td_thread.daemon = True
-                                        td_thread.start()
+                                        # Continue to truth/dare phase
+                                        start_truth_dare_phase()
                                         break
                             
                             minigame_thread = threading.Thread(target=end_minigame)
@@ -216,10 +214,8 @@ def register_socket_events(socketio, game_manager):
                         
                         socketio.emit('game_state_update', room.game_state.to_dict(), room=room_code, namespace='/')
                         
-                        # Continue to truth/dare phase in a thread
-                        td_thread = threading.Thread(target=start_truth_dare_phase)
-                        td_thread.daemon = True
-                        td_thread.start()
+                        # Continue to truth/dare phase
+                        start_truth_dare_phase()
                 
                 def start_truth_dare_phase():
                     """Start truth/dare phase (called after selection)"""
@@ -449,10 +445,7 @@ def register_socket_events(socketio, game_manager):
                                         
                                         socketio.emit('game_state_update', room.game_state.to_dict(), room=room_code, namespace='/')
                                         
-                                        # Continue to truth/dare phase in a thread
-                                        td_thread = threading.Thread(target=start_truth_dare_phase)
-                                        td_thread.daemon = True
-                                        td_thread.start()
+                                        start_truth_dare_phase()
                                         break
                             
                             minigame_thread = threading.Thread(target=end_minigame)
@@ -474,10 +467,7 @@ def register_socket_events(socketio, game_manager):
                         
                         socketio.emit('game_state_update', room.game_state.to_dict(), room=room_code, namespace='/')
                         
-                        # Continue to truth/dare phase in a thread
-                        td_thread = threading.Thread(target=start_truth_dare_phase)
-                        td_thread.daemon = True
-                        td_thread.start()
+                        start_truth_dare_phase()
                 
                 def start_truth_dare_phase():
                     selection_duration = room.settings['selection_duration']
