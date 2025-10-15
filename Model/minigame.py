@@ -21,7 +21,8 @@ class Minigame:
         if total_non_participants == 0:
             return False
         
-        required_votes = (total_non_participants // 2) + 1
+        # Use same formula as skip votes: at least half (rounding up)
+        required_votes = (total_non_participants + 1) // 2
         return len(self.votes) >= required_votes
     
     def determine_loser(self):

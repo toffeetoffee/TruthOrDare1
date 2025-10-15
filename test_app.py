@@ -1114,7 +1114,7 @@ def test_minigame_voting_incomplete():
     # Only 1 vote out of 4 non-participants
     minigame.add_vote('voter1', 'Alice')
     
-    assert minigame.check_voting_complete(4) == False  # Need 3 votes for majority
+    assert minigame.check_voting_complete(4) == False  # Need 2 votes (using same formula as skip votes)
 
 def test_minigame_voting_exact_majority():
     """Test voting with exact majority"""
@@ -1129,11 +1129,47 @@ def test_minigame_voting_exact_majority():
     minigame.add_participant(alice)
     minigame.add_participant(bob)
     
-    # 2 votes out of 3 non-participants (exact majority)
+    # 2 votes out of 3 non-participants (majority using (3+1)//2 = 2)
     minigame.add_vote('voter1', 'Alice')
     minigame.add_vote('voter2', 'Alice')
     
     assert minigame.check_voting_complete(3) == True
+
+def test_minigame_voting_threshold_matches_skip():
+    """Test that minigame voting uses same threshold as skip votes"""
+    from Model.minigame import StaringContest
+    from Model.player import Player
+    
+    minigame = StaringContest()
+    
+    alice = Player('sid1', 'Alice')
+    bob = Player('sid2', 'Bob')
+    
+    minigame.add_participant(alice)
+    minigame.add_participant(bob)
+    
+    # Test various scenarios to ensure formula matches skip votes: (n + 1) // 2
+    
+    # 2 non-participants: need (2+1)//2 = 1 vote
+    minigame.add_vote('v1', 'Alice')
+    assert minigame.check_voting_complete(2) == True
+    
+    minigame.votes.clear()
+    
+    # 4 non-participants: need (4+1)//2 = 2 votes
+    minigame.add_vote('v1', 'Alice')
+    assert minigame.check_voting_complete(4) == False  # Only 1 vote
+    minigame.add_vote('v2', 'Alice')
+    assert minigame.check_voting_complete(4) == True  # Now 2 votes
+    
+    minigame.votes.clear()
+    
+    # 5 non-participants: need (5+1)//2 = 3 votes
+    minigame.add_vote('v1', 'Alice')
+    minigame.add_vote('v2', 'Alice')
+    assert minigame.check_voting_complete(5) == False  # Only 2 votes
+    minigame.add_vote('v3', 'Alice')
+    assert minigame.check_voting_complete(5) == True  # Now 3 votes
 
 def test_host_can_update_minigame_chance():
     """Test that host can update minigame chance setting"""

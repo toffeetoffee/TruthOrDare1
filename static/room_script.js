@@ -175,12 +175,15 @@ function updateGameUI() {
         document.getElementById('minigame-voting').style.display = 'block';
         document.getElementById('minigame-participant-message').style.display = 'none';
         
+        // Re-enable buttons (reset from previous rounds)
+        const btn1 = document.getElementById('vote-btn-1');
+        const btn2 = document.getElementById('vote-btn-2');
+        btn1.disabled = false;
+        btn2.disabled = false;
+        
         // Update button onclick handlers
         document.getElementById('vote-name-1').textContent = participants[0] || 'Player 1';
         document.getElementById('vote-name-2').textContent = participants[1] || 'Player 2';
-        
-        const btn1 = document.getElementById('vote-btn-1');
-        const btn2 = document.getElementById('vote-btn-2');
         
         btn1.onclick = () => voteMinigame(participants[0]);
         btn2.onclick = () => voteMinigame(participants[1]);
@@ -268,6 +271,11 @@ function updateGameUI() {
     const voteSection = document.getElementById('vote-section');
     if (!isSelectedPlayer) {
       voteSection.style.display = 'block';
+      
+      // Re-enable skip vote button (reset from previous rounds)
+      const voteSkipButton = document.getElementById('vote-skip-button');
+      voteSkipButton.disabled = false;
+      voteSkipButton.textContent = 'Vote to Skip';
       
       // Update vote count
       const totalPlayers = playerList.children.length;
