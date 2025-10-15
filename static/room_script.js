@@ -34,8 +34,6 @@ socket.on('settings_updated', (data) => {
     document.getElementById('setting-truthdare').value = data.settings.truth_dare_duration || 60;
     document.getElementById('setting-skip').value = data.settings.skip_duration || 5;
     document.getElementById('setting-maxrounds').value = data.settings.max_rounds || 10;
-    document.getElementById('setting-minigame').value = data.settings.minigame_chance || 20;
-    document.getElementById('setting-minigameduration').value = data.settings.minigame_duration || 30;
   }
 });
 
@@ -127,7 +125,6 @@ function updateGameUI() {
   // Hide all sections first
   document.getElementById('countdown-section').style.display = 'none';
   document.getElementById('preparation-section').style.display = 'none';
-  document.getElementById('minigame-section').style.display = 'none';
   document.getElementById('selection-section').style.display = 'none';
   document.getElementById('truth-dare-section').style.display = 'none';
   document.getElementById('end-game-section').style.display = 'none';
@@ -166,44 +163,6 @@ function updateGameUI() {
     
     // Update preparation timer
     startPreparationTimer();
-    
-  } else if (gameState.phase === 'minigame') {
-    lobbySection.classList.add('hide');
-    gameArea.classList.add('show');
-    document.getElementById('minigame-section').style.display = 'block';
-    
-    // Update minigame UI
-    if (gameState.minigame) {
-      const minigame = gameState.minigame;
-      
-      // Set contestant names
-      document.getElementById('contestant1-name').textContent = minigame.contestant1;
-      document.getElementById('contestant2-name').textContent = minigame.contestant2;
-      document.getElementById('vote-contestant1-name').textContent = minigame.contestant1;
-      document.getElementById('vote-contestant2-name').textContent = minigame.contestant2;
-      
-      // Check if current player is a contestant
-      const isContestant = minigame.contestants.includes(PLAYER_NAME);
-      
-      if (isContestant) {
-        // Show contestant message
-        document.getElementById('contestant-message').style.display = 'block';
-        document.getElementById('minigame-voting').style.display = 'none';
-      } else {
-        // Show voting buttons
-        document.getElementById('contestant-message').style.display = 'none';
-        document.getElementById('minigame-voting').style.display = 'block';
-        
-        // Update vote counts
-        if (minigame.votes) {
-          document.getElementById('contestant1-votes').textContent = minigame.votes[minigame.contestant1] || 0;
-          document.getElementById('contestant2-votes').textContent = minigame.votes[minigame.contestant2] || 0;
-        }
-      }
-    }
-    
-    // Update minigame timer
-    startMinigameTimer();
     
   } else if (gameState.phase === 'selection') {
     lobbySection.classList.add('hide');
@@ -368,17 +327,6 @@ function startPreparationTimer() {
   }, 1000);
 }
 
-function startMinigameTimer() {
-  clearInterval(timerInterval);
-  timerInterval = setInterval(() => {
-    const timer = document.getElementById('minigame-timer');
-    if (timer) {
-      timer.textContent = Math.max(0, gameState.remaining_time);
-      gameState.remaining_time--;
-    }
-  }, 1000);
-}
-
 function startSelectionTimer() {
   clearInterval(timerInterval);
   timerInterval = setInterval(() => {
@@ -430,9 +378,7 @@ function saveSettings() {
     selection_duration: parseInt(document.getElementById('setting-selection').value),
     truth_dare_duration: parseInt(document.getElementById('setting-truthdare').value),
     skip_duration: parseInt(document.getElementById('setting-skip').value),
-    max_rounds: parseInt(document.getElementById('setting-maxrounds').value),
-    minigame_chance: parseInt(document.getElementById('setting-minigame').value),
-    minigame_duration: parseInt(document.getElementById('setting-minigameduration').value)
+    max_rounds: parseInt(document.getElementById('setting-maxrounds').value)
   };
   
   // Validate settings
@@ -458,14 +404,6 @@ function saveSettings() {
   }
   if (settings.max_rounds < 1 || settings.max_rounds > 50) {
     alert('Maximum rounds must be between 1 and 50');
-    return;
-  }
-  if (settings.minigame_chance < 0 || settings.minigame_chance > 100) {
-    alert('Minigame chance must be between 0 and 100%');
-    return;
-  }
-  if (settings.minigame_duration < 10 || settings.minigame_duration > 60) {
-    alert('Minigame duration must be between 10 and 60 seconds');
     return;
   }
   
@@ -536,23 +474,6 @@ function voteSkip() {
   
   socket.emit('vote_skip', {
     room: ROOM_CODE
-  });
-}
-
-function voteMinigame(contestantId) {
-  // contestantId is 'contestant1' or 'contestant2'
-  const contestant1Name = document.getElementById('contestant1-name').textContent;
-  const contestant2Name = document.getElementById('contestant2-name').textContent;
-  
-  const votedPlayer = contestantId === 'contestant1' ? contestant1Name : contestant2Name;
-  
-  // Disable both buttons
-  document.getElementById('vote-contestant1-btn').disabled = true;
-  document.getElementById('vote-contestant2-btn').disabled = true;
-  
-  socket.emit('vote_minigame', {
-    room: ROOM_CODE,
-    voted_player: votedPlayer
   });
 }
 

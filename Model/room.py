@@ -15,12 +15,10 @@ class Room:
         self.settings = {
             'countdown_duration': 10,
             'preparation_duration': 30,
-            'minigame_duration': 30,
             'selection_duration': 10,
             'truth_dare_duration': 60,
             'skip_duration': 5,
-            'max_rounds': 10,
-            'minigame_chance': 20  # Percentage (0-100)
+            'max_rounds': 10
         }
     
     def update_settings(self, new_settings):
@@ -32,10 +30,6 @@ class Room:
         # Update game state max_rounds if changed
         if 'max_rounds' in new_settings:
             self.game_state.max_rounds = int(new_settings['max_rounds'])
-        
-        # Update game state minigame_chance if changed
-        if 'minigame_chance' in new_settings:
-            self.game_state.minigame_chance = int(new_settings['minigame_chance']) / 100.0
     
     def add_player(self, player):
         """Add a player to the room"""

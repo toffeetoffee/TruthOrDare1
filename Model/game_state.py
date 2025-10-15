@@ -6,7 +6,6 @@ class GameState:
     PHASE_LOBBY = 'lobby'
     PHASE_COUNTDOWN = 'countdown'
     PHASE_PREPARATION = 'preparation'
-    PHASE_MINIGAME = 'minigame'
     PHASE_SELECTION = 'selection'
     PHASE_TRUTH_DARE = 'truth_dare'
     PHASE_END_GAME = 'end_game'
@@ -18,11 +17,8 @@ class GameState:
         self.selected_player = None
         self.selected_choice = None  # 'truth', 'dare', or None
         self.current_truth_dare = None  # The actual truth/dare being performed
+        self.event_chance = 0.0  # 0% for now, will be configurable later
         self.skip_votes = set()  # Set of player socket IDs who voted to skip
-        
-        # Minigame tracking
-        self.current_minigame = None  # Minigame object
-        self.minigame_chance = 0.2  # 20% chance by default
         
         # Round tracking
         self.current_round = 0
@@ -42,16 +38,9 @@ class GameState:
         self.selected_player = None
         self.selected_choice = None
         self.current_truth_dare = None
-        self.current_minigame = None
         self.skip_votes.clear()
         # Increment round
         self.current_round += 1
-    
-    def start_minigame(self, minigame, duration=30):
-        """Start the minigame phase"""
-        self.phase = self.PHASE_MINIGAME
-        self.phase_end_time = datetime.now() + timedelta(seconds=duration)
-        self.current_minigame = minigame
     
     def start_selection(self, duration=10):
         """Start the selection phase"""
@@ -120,27 +109,20 @@ class GameState:
         self.selected_player = None
         self.selected_choice = None
         self.current_truth_dare = None
-        self.current_minigame = None
         self.skip_votes.clear()
         self.current_round = 0
     
     def to_dict(self):
         """Convert to dictionary"""
-        data = {
+        return {
             'phase': self.phase,
             'remaining_time': self.get_remaining_time(),
             'started': self.started,
             'selected_player': self.selected_player,
             'selected_choice': self.selected_choice,
             'current_truth_dare': self.current_truth_dare,
+            'event_chance': self.event_chance,
             'skip_vote_count': self.get_skip_vote_count(),
             'current_round': self.current_round,
-            'max_rounds': self.max_rounds,
-            'minigame_chance': int(self.minigame_chance * 100)  # Convert to percentage
+            'max_rounds': self.max_rounds
         }
-        
-        # Add minigame data if active
-        if self.current_minigame:
-            data['minigame'] = self.current_minigame.to_dict()
-        
-        return data

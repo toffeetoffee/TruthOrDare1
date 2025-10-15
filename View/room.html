@@ -81,18 +81,6 @@
         <div class="settings-hint">Number of rounds before game ends (1-50)</div>
       </div>
       
-      <div class="settings-group">
-        <label class="settings-label">Minigame Chance (%)</label>
-        <input type="number" id="setting-minigame" class="settings-input" min="0" max="100" value="20">
-        <div class="settings-hint">Chance of minigame after preparation (0-100%)</div>
-      </div>
-      
-      <div class="settings-group">
-        <label class="settings-label">Minigame Duration (seconds)</label>
-        <input type="number" id="setting-minigameduration" class="settings-input" min="10" max="60" value="30">
-        <div class="settings-hint">Time for minigame voting (10-60 seconds)</div>
-      </div>
-      
       <div class="modal-buttons">
         <button class="btn-save" onclick="saveSettings()">Save Settings</button>
         <button class="btn-cancel" onclick="closeSettings()">Cancel</button>
@@ -138,47 +126,6 @@
           <button onclick="submitTruthDare()">Submit</button>
           
           <div id="submission-success" class="submission-success"></div>
-        </div>
-      </div>
-    </div>
-
-    <!-- Minigame Phase -->
-    <div id="minigame-section" style="display: none;">
-      <div class="minigame-phase">
-        <div class="minigame-title">⚡ STARING CONTEST! ⚡</div>
-        
-        <div class="minigame-contestants">
-          <div class="contestant-display">
-            <div class="contestant-name" id="contestant1-name">Player 1</div>
-            <span class="vs-text">VS</span>
-            <div class="contestant-name" id="contestant2-name">Player 2</div>
-          </div>
-        </div>
-        
-        <div class="minigame-timer">
-          Time: <span id="minigame-timer">30</span>s
-        </div>
-        
-        <!-- For contestants: just watch -->
-        <div id="contestant-message" class="contestant-message" style="display: none;">
-          <p>You are competing! Stare at your opponent!</p>
-          <p style="font-size: 16px; color: #666;">Other players will vote for who blinked first</p>
-        </div>
-        
-        <!-- For voters: voting buttons -->
-        <div id="minigame-voting" class="minigame-voting" style="display: none;">
-          <div class="voting-instruction">Who blinked first?</div>
-          <div class="voting-buttons">
-            <button class="vote-contestant-btn" id="vote-contestant1-btn" onclick="voteMinigame('contestant1')">
-              <span id="vote-contestant1-name">Player 1</span>
-            </button>
-            <button class="vote-contestant-btn" id="vote-contestant2-btn" onclick="voteMinigame('contestant2')">
-              <span id="vote-contestant2-name">Player 2</span>
-            </button>
-          </div>
-          <div class="vote-status">
-            <span id="contestant1-votes">0</span> votes vs <span id="contestant2-votes">0</span> votes
-          </div>
         </div>
       </div>
     </div>
