@@ -29,6 +29,10 @@ def register_socket_events(socketio, game_manager):
             for participant in participants:
                 minigame.add_participant(participant)
             
+            # Set total voters (all players except the 2 participants)
+            total_voters = len(room.players) - 2
+            minigame.set_total_voters(total_voters)
+            
             # Award participation points
             for participant in participants:
                 ScoringSystem.award_minigame_participate_points(participant)
@@ -386,14 +390,49 @@ def register_socket_events(socketio, game_manager):
         if player.name in participant_names:
             return  # Participants can't vote
         
+        # Check if player already voted
+        if request.sid in minigame.votes:
+            return  # Already voted
+        
         # Add vote
         minigame.add_vote(request.sid, voted_player)
         
-        # Check if voting is complete
-        total_non_participants = len(room.players) - len(minigame.participants)
-        if minigame.check_voting_complete(total_non_participants):
-            # Determine loser
-            loser = minigame.determine_loser()
+        # Check for immediate winner (one player reached at least half of total votes)
+        loser = minigame.check_immediate_winner()
+        
+        if loser:
+            # Someone reached the threshold - proceed immediately
+            room.game_state.set_selected_player(loser.name)
+            
+            # Move to selection phase
+            selection_duration = room.settings['selection_duration']
+            room.game_state.start_selection(duration=selection_duration)
+            
+            socketio.emit('game_state_update', room.game_state.to_dict(), room=room_code, namespace='/')
+            
+            # Schedule truth/dare phase
+            def start_td():
+                time.sleep(selection_duration)
+                start_truth_dare_phase_handler(room_code)
+            
+            td_thread = threading.Thread(target=start_td)
+            td_thread.daemon = True
+            td_thread.start()
+        elif minigame.check_all_voted():
+            # All voters have voted - check for tie
+            vote_counts = minigame.get_vote_counts()
+            
+            if len(vote_counts) == 2:
+                counts = list(vote_counts.values())
+                if counts[0] == counts[1]:
+                    # It's a tie - randomly pick loser
+                    loser = minigame.handle_tie()
+                else:
+                    # Someone has more votes
+                    loser = minigame.determine_loser()
+            else:
+                # One player has all or most votes
+                loser = minigame.determine_loser()
             
             if loser:
                 # Set loser as selected player
@@ -432,6 +471,10 @@ def register_socket_events(socketio, game_manager):
         if room.game_state.phase != 'truth_dare':
             return
         
+        # Can't vote if skip already activated
+        if room.game_state.skip_activated:
+            return
+        
         # Only non-selected players can vote
         player = room.get_player_by_sid(request.sid)
         if not player or player.name == room.game_state.selected_player:
@@ -445,6 +488,9 @@ def register_socket_events(socketio, game_manager):
         required_votes = (other_players_count + 1) // 2  # At least half (ceiling division)
         
         if room.game_state.get_skip_vote_count() >= required_votes:
+            # Activate skip
+            room.game_state.activate_skip()
+            
             # Reduce timer to configured skip duration
             skip_duration = room.settings['skip_duration']
             room.game_state.reduce_timer(skip_duration)

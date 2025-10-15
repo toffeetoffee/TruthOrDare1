@@ -163,6 +163,13 @@ function updateGameUI() {
       document.getElementById('participant-1').textContent = participants[0] || 'Player 1';
       document.getElementById('participant-2').textContent = participants[1] || 'Player 2';
       
+      // Display vote counts for each participant
+      const voteCounts = gameState.minigame.vote_counts || {};
+      const votes1 = voteCounts[participants[0]] || 0;
+      const votes2 = voteCounts[participants[1]] || 0;
+      document.getElementById('participant-1-votes').textContent = `${votes1} vote${votes1 !== 1 ? 's' : ''}`;
+      document.getElementById('participant-2-votes').textContent = `${votes2} vote${votes2 !== 1 ? 's' : ''}`;
+      
       // Check if current player is a participant
       const isParticipant = participants.includes(PLAYER_NAME);
       
@@ -188,12 +195,12 @@ function updateGameUI() {
         btn1.onclick = () => voteMinigame(participants[0]);
         btn2.onclick = () => voteMinigame(participants[1]);
         
-        // Update vote count
-        const totalPlayers = playerList.children.length;
-        const requiredVotes = Math.ceil((totalPlayers - 2) / 2);
+        // Update vote count (show how many voted out of total)
+        const totalVoters = gameState.minigame.total_voters || 0;
+        const currentVotes = gameState.minigame.vote_count || 0;
         
-        document.getElementById('minigame-vote-count').textContent = gameState.minigame.vote_count || 0;
-        document.getElementById('minigame-required-votes').textContent = requiredVotes;
+        document.getElementById('minigame-vote-count').textContent = currentVotes;
+        document.getElementById('minigame-required-votes').textContent = totalVoters;
       }
     }
     
@@ -272,10 +279,18 @@ function updateGameUI() {
     if (!isSelectedPlayer) {
       voteSection.style.display = 'block';
       
-      // Re-enable skip vote button (reset from previous rounds)
       const voteSkipButton = document.getElementById('vote-skip-button');
-      voteSkipButton.disabled = false;
-      voteSkipButton.textContent = 'Vote to Skip';
+      
+      // Check if skip has been activated
+      if (gameState.skip_activated) {
+        // Skip activated - disable button for everyone
+        voteSkipButton.disabled = true;
+        voteSkipButton.textContent = 'Skip Activated!';
+      } else {
+        // Re-enable skip vote button (reset from previous rounds)
+        voteSkipButton.disabled = false;
+        voteSkipButton.textContent = 'Vote to Skip';
+      }
       
       // Update vote count
       const totalPlayers = playerList.children.length;

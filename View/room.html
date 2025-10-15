@@ -96,6 +96,11 @@
 
   <!-- Game Area -->
   <div id="game-area" class="game-area">
+    <!-- Leave button always visible during game -->
+    <div class="game-leave-button">
+      <button class="btn-leave" onclick="leaveRoom()">Leave Room</button>
+    </div>
+    
     <!-- Countdown -->
     <div id="countdown-section" style="display: none;">
       <div class="countdown">
@@ -171,10 +176,12 @@
         <div class="minigame-participants">
           <div class="participant-card">
             <div class="participant-name" id="participant-1">Player 1</div>
+            <div class="participant-votes" id="participant-1-votes">0 votes</div>
           </div>
           <div class="vs-text">VS</div>
           <div class="participant-card">
             <div class="participant-name" id="participant-2">Player 2</div>
+            <div class="participant-votes" id="participant-2-votes">0 votes</div>
           </div>
         </div>
         

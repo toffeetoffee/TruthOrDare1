@@ -127,6 +127,15 @@ button:disabled {
   display: block;
 }
 
+.game-leave-button {
+  text-align: center;
+  margin-bottom: 20px;
+}
+
+.game-leave-button button {
+  padding: 10px 30px;
+}
+
 .countdown {
   text-align: center;
   padding: 40px;
@@ -635,6 +644,13 @@ button:disabled {
   font-size: 24px;
   font-weight: bold;
   color: #333;
+}
+
+.participant-votes {
+  font-size: 16px;
+  color: #007bff;
+  margin-top: 8px;
+  font-weight: 500;
 }
 
 .vs-text {
