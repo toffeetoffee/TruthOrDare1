@@ -944,3 +944,142 @@ def test_room_default_settings_include_max_rounds():
     
     assert 'max_rounds' in room.settings
     assert room.settings['max_rounds'] == 10
+
+def test_room_default_settings_include_minigame():
+    """Test that room default settings include minigame settings"""
+    from Model.room import Room
+    
+    room = Room('TEST')
+    
+    assert 'minigame_chance' in room.settings
+    assert 'minigame_duration' in room.settings
+    assert room.settings['minigame_chance'] == 20  # 20%
+    assert room.settings['minigame_duration'] == 30  # 30 seconds
+
+def test_scoring_system_minigame_points():
+    """Test scoring system has minigame participation points"""
+    from Model.scoring_system import ScoringSystem
+    
+    assert ScoringSystem.POINTS_MINIGAME_PARTICIPATION == 75
+    assert ScoringSystem.POINTS_PERFORM > ScoringSystem.POINTS_MINIGAME_PARTICIPATION
+    assert ScoringSystem.POINTS_MINIGAME_PARTICIPATION > ScoringSystem.POINTS_SUBMITTED_PERFORMED
+
+def test_minigame_creation():
+    """Test creating a staring contest minigame"""
+    from Model.minigame import StaringContest
+    from Model.player import Player
+    
+    player1 = Player('sid1', 'Alice')
+    player2 = Player('sid2', 'Bob')
+    
+    minigame = StaringContest(player1, player2)
+    
+    assert len(minigame.contestants) == 2
+    assert minigame.contestant1.name == 'Alice'
+    assert minigame.contestant2.name == 'Bob'
+    assert minigame.loser is None
+    assert minigame.is_complete == False
+
+def test_minigame_voting():
+    """Test voting in minigame"""
+    from Model.minigame import StaringContest
+    from Model.player import Player
+    
+    player1 = Player('sid1', 'Alice')
+    player2 = Player('sid2', 'Bob')
+    
+    minigame = StaringContest(player1, player2)
+    
+    # Add votes (from other players)
+    minigame.add_vote('voter1_sid', 'Alice')  # Vote that Alice blinked
+    minigame.add_vote('voter2_sid', 'Alice')
+    minigame.add_vote('voter3_sid', 'Bob')
+    
+    assert minigame.get_vote_count('Alice') == 2
+    assert minigame.get_vote_count('Bob') == 1
+
+def test_minigame_majority():
+    """Test minigame majority checking"""
+    from Model.minigame import StaringContest
+    from Model.player import Player
+    
+    player1 = Player('sid1', 'Alice')
+    player2 = Player('sid2', 'Bob')
+    
+    minigame = StaringContest(player1, player2)
+    
+    # With 4 total voters, need 2 votes for majority
+    minigame.add_vote('voter1_sid', 'Alice')
+    assert minigame.check_majority(4) == False
+    
+    minigame.add_vote('voter2_sid', 'Alice')
+    assert minigame.check_majority(4) == True
+    assert minigame.loser == 'Alice'
+    assert minigame.is_complete == True
+
+def test_minigame_to_dict():
+    """Test minigame serialization"""
+    from Model.minigame import StaringContest
+    from Model.player import Player
+    
+    player1 = Player('sid1', 'Alice')
+    player2 = Player('sid2', 'Bob')
+    
+    minigame = StaringContest(player1, player2)
+    minigame.add_vote('voter1_sid', 'Alice')
+    
+    data = minigame.to_dict()
+    
+    assert data['type'] == 'StaringContest'
+    assert data['contestant1'] == 'Alice'
+    assert data['contestant2'] == 'Bob'
+    assert 'votes' in data
+    assert data['votes']['Alice'] == 1
+    assert data['votes']['Bob'] == 0
+    assert 'description' in data
+
+def test_game_state_minigame_phase():
+    """Test game state minigame phase"""
+    from Model.game_state import GameState
+    from Model.minigame import StaringContest
+    from Model.player import Player
+    
+    state = GameState()
+    
+    player1 = Player('sid1', 'Alice')
+    player2 = Player('sid2', 'Bob')
+    minigame = StaringContest(player1, player2)
+    
+    state.start_minigame(minigame, duration=30)
+    
+    assert state.phase == GameState.PHASE_MINIGAME
+    assert state.current_minigame == minigame
+    assert state.get_remaining_time() > 0
+
+def test_game_state_minigame_chance():
+    """Test game state tracks minigame chance"""
+    from Model.game_state import GameState
+    
+    state = GameState()
+    
+    assert state.minigame_chance == 0.2  # 20% default
+    
+    state.minigame_chance = 0.5  # 50%
+    assert state.minigame_chance == 0.5
+    
+    # Check it's included in to_dict
+    state_dict = state.to_dict()
+    assert state_dict['minigame_chance'] == 50  # Converted to percentage
+
+def test_player_minigame_participation_scoring():
+    """Test awarding points for minigame participation"""
+    from Model.player import Player
+    from Model.scoring_system import ScoringSystem
+    
+    player = Player('sid1', 'Alice')
+    
+    assert player.score == 0
+    
+    ScoringSystem.award_minigame_participation_points(player)
+    
+    assert player.score == 75
