@@ -21,6 +21,7 @@ class GameState:
         self.minigame = None  # Current minigame instance
         self.skip_votes = set()  # Set of player socket IDs who voted to skip
         self.skip_activated = False  # Whether skip has been activated this round
+        self.list_empty = False  # Whether selected player ran out of truths/dares
         
         # Round tracking
         self.current_round = 0
@@ -62,6 +63,7 @@ class GameState:
         self.phase_end_time = datetime.now() + timedelta(seconds=duration)
         self.skip_votes.clear()
         self.skip_activated = False
+        self.list_empty = False
     
     def start_end_game(self):
         """Start the end game phase"""
@@ -141,6 +143,7 @@ class GameState:
             'current_truth_dare': self.current_truth_dare,
             'skip_vote_count': self.get_skip_vote_count(),
             'skip_activated': self.skip_activated,
+            'list_empty': self.list_empty,
             'current_round': self.current_round,
             'max_rounds': self.max_rounds
         }

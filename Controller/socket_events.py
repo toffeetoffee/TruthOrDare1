@@ -75,6 +75,8 @@ def register_socket_events(socketio, game_manager):
         
         # Get the selected player
         selected_player = room.get_player_by_name(room.game_state.selected_player)
+        list_was_empty = False
+        
         if selected_player:
             # Pick random truth or dare based on choice
             choice = room.game_state.selected_choice
@@ -84,16 +86,44 @@ def register_socket_events(socketio, game_manager):
                     selected_item = random.choice(truths)
                     selected_player.truth_dare_list.truths.remove(selected_item)
                     room.game_state.set_current_truth_dare(selected_item.to_dict())
+                else:
+                    # List is empty!
+                    list_was_empty = True
+                    room.game_state.list_empty = True
+                    room.game_state.set_current_truth_dare({
+                        'text': f'{selected_player.name} has no more truths available!',
+                        'type': 'truth',
+                        'is_default': False,
+                        'submitted_by': None
+                    })
             else:  # dare
                 dares = selected_player.truth_dare_list.dares
                 if dares:
                     selected_item = random.choice(dares)
                     selected_player.truth_dare_list.dares.remove(selected_item)
                     room.game_state.set_current_truth_dare(selected_item.to_dict())
+                else:
+                    # List is empty!
+                    list_was_empty = True
+                    room.game_state.list_empty = True
+                    room.game_state.set_current_truth_dare({
+                        'text': f'{selected_player.name} has no more dares available!',
+                        'type': 'dare',
+                        'is_default': False,
+                        'submitted_by': None
+                    })
         
         # Start truth/dare phase with configurable duration
         td_duration = room.settings['truth_dare_duration']
         room.game_state.start_truth_dare(duration=td_duration)
+        
+        # If list was empty, automatically activate skip
+        if list_was_empty:
+            room.game_state.list_empty = True
+            room.game_state.activate_skip()
+            skip_duration = room.settings['skip_duration']
+            room.game_state.reduce_timer(skip_duration)
+        
         socketio.emit('game_state_update', room.game_state.to_dict(), room=room_code, namespace='/')
         
         # Schedule end of truth/dare phase

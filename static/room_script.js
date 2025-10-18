@@ -275,6 +275,14 @@ function updateGameUI() {
     gameArea.classList.add('show');
     document.getElementById('truth-dare-section').style.display = 'block';
     
+    // Show/hide empty list banner
+    const emptyListBanner = document.getElementById('empty-list-banner');
+    if (gameState.list_empty) {
+      emptyListBanner.style.display = 'flex';
+    } else {
+      emptyListBanner.style.display = 'none';
+    }
+    
     // Update phase type and challenge
     const phaseType = document.getElementById('phase-type');
     const performingPlayer = document.getElementById('performing-player-name');
@@ -290,6 +298,20 @@ function updateGameUI() {
     
     if (gameState.current_truth_dare) {
       challengeText.textContent = gameState.current_truth_dare.text;
+      
+      // Add warning styling if list was empty
+      if (gameState.list_empty) {
+        challengeText.style.background = '#fff3cd';
+        challengeText.style.color = '#856404';
+        challengeText.style.border = '2px solid #ffc107';
+        challengeText.style.fontWeight = 'bold';
+      } else {
+        // Reset to normal styling
+        challengeText.style.background = 'white';
+        challengeText.style.color = '#333';
+        challengeText.style.border = 'none';
+        challengeText.style.fontWeight = 'normal';
+      }
     }
     
     // Show vote section only for non-selected players
@@ -300,15 +322,25 @@ function updateGameUI() {
       
       const voteSkipButton = document.getElementById('vote-skip-button');
       
-      // Check if skip has been activated
-      if (gameState.skip_activated) {
-        // Skip activated - disable button for everyone
+      // Check if list was empty or skip has been activated
+      if (gameState.list_empty) {
+        // List empty - skip auto-activated
+        voteSkipButton.disabled = true;
+        voteSkipButton.textContent = '⚠️ List Empty - Skip Auto-Activated!';
+        voteSkipButton.style.background = '#ffc107';
+        voteSkipButton.style.color = '#000';
+      } else if (gameState.skip_activated) {
+        // Skip activated normally
         voteSkipButton.disabled = true;
         voteSkipButton.textContent = 'Skip Activated!';
+        voteSkipButton.style.background = '#6c757d';
+        voteSkipButton.style.color = 'white';
       } else {
         // Re-enable skip vote button (reset from previous rounds)
         voteSkipButton.disabled = false;
         voteSkipButton.textContent = 'Vote to Skip';
+        voteSkipButton.style.background = '#6c757d';
+        voteSkipButton.style.color = 'white';
       }
       
       // Update vote count
