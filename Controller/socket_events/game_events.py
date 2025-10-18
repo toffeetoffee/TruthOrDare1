@@ -1,14 +1,19 @@
-from flask_socketio import join_room, leave_room, emit
+"""
+Socket event handlers for game flow (start, restart, submissions, choices, voting)
+"""
+
+from flask_socketio import emit
 from flask import request
 import threading
 import time
 import random
 from Model.systems.scoring_system import ScoringSystem
 from Model.records.round_record import RoundRecord
-from Model.minigames.minigame import StaringContest
+from Model.minigames.staring_contest import StaringContest
 
-def register_socket_events(socketio, game_manager):
-    """Register SocketIO event handlers"""
+
+def register_game_events(socketio, game_manager):
+    """Register game-related socket events"""
     
     def start_selection_or_minigame(room_code):
         """Helper to decide between minigame or normal selection"""
@@ -43,7 +48,7 @@ def register_socket_events(socketio, game_manager):
             
             socketio.emit('game_state_update', room.game_state.to_dict(), room=room_code, namespace='/')
             
-            # Minigame continues until voting completes (handled by on_minigame_vote)
+            # Minigame continues until voting completes (handled by minigame_events.py)
         else:
             # No minigame - proceed to normal selection
             selected_player = random.choice(room.players)
@@ -167,97 +172,6 @@ def register_socket_events(socketio, game_manager):
         td_end_thread.daemon = True
         td_end_thread.start()
     
-    @socketio.on('join')
-    def on_join(data):
-        room_code = data.get('room')
-        name = data.get('name', 'Anonymous')
-        
-        if not room_code:
-            return
-        
-        join_room(room_code)
-        
-        # Add player to room
-        room = game_manager.add_player_to_room(room_code, request.sid, name)
-        
-        # Broadcast updated state
-        _broadcast_room_state(room_code, room)
-    
-    @socketio.on('leave')
-    def on_leave(data):
-        room_code = data.get('room')
-        
-        if not room_code:
-            return
-        
-        # Remove player
-        room = game_manager.remove_player_from_room(room_code, request.sid)
-        leave_room(room_code)
-        
-        # Broadcast updated state if room still exists
-        if room:
-            _broadcast_room_state(room_code, room)
-        
-        # Notify the leaving player
-        emit('left_room', {}, to=request.sid)
-    
-    @socketio.on('destroy_room')
-    def on_destroy_room(data):
-        room_code = data.get('room')
-        
-        if not room_code:
-            return
-        
-        room = game_manager.get_room(room_code)
-        if not room:
-            return
-        
-        # Only host can destroy
-        if not room.is_host(request.sid):
-            return
-        
-        # Notify all players
-        emit('room_destroyed', {}, room=room_code)
-        
-        # Delete room
-        game_manager.delete_room(room_code)
-    
-    @socketio.on('update_settings')
-    def on_update_settings(data):
-        room_code = data.get('room')
-        settings = data.get('settings', {})
-        
-        if not room_code:
-            return
-        
-        room = game_manager.get_room(room_code)
-        if not room:
-            return
-        
-        # Only host can update settings
-        if not room.is_host(request.sid):
-            return
-        
-        # Update settings
-        room.update_settings(settings)
-        
-        # Broadcast updated settings to all players
-        emit('settings_updated', {'settings': room.settings}, room=room_code)
-    
-    @socketio.on('get_settings')
-    def on_get_settings(data):
-        room_code = data.get('room')
-        
-        if not room_code:
-            return
-        
-        room = game_manager.get_room(room_code)
-        if not room:
-            return
-        
-        # Send current settings to requester
-        emit('settings_updated', {'settings': room.settings}, to=request.sid)
-    
     @socketio.on('start_game')
     def on_start_game(data):
         room_code = data.get('room')
@@ -361,101 +275,6 @@ def register_socket_events(socketio, game_manager):
         # Broadcast updated state
         emit('game_state_update', room.game_state.to_dict(), room=room_code)
     
-    @socketio.on('minigame_vote')
-    def on_minigame_vote(data):
-        room_code = data.get('room')
-        voted_player = data.get('voted_player')  # Name of player who blinked
-        
-        if not room_code or not voted_player:
-            return
-        
-        room = game_manager.get_room(room_code)
-        if not room:
-            return
-        
-        # Only during minigame phase
-        if room.game_state.phase != 'minigame':
-            return
-        
-        minigame = room.game_state.minigame
-        if not minigame:
-            return
-        
-        # Only non-participants can vote
-        player = room.get_player_by_sid(request.sid)
-        if not player:
-            return
-        
-        participant_names = minigame.get_participant_names()
-        if player.name in participant_names:
-            return  # Participants can't vote
-        
-        # Check if player already voted
-        if request.sid in minigame.votes:
-            return  # Already voted
-        
-        # Add vote
-        minigame.add_vote(request.sid, voted_player)
-        
-        # Check for immediate winner (one player reached at least half of total votes)
-        loser = minigame.check_immediate_winner()
-        
-        if loser:
-            # Someone reached the threshold - proceed immediately
-            room.game_state.set_selected_player(loser.name)
-            
-            # Move to selection phase
-            selection_duration = room.settings['selection_duration']
-            room.game_state.start_selection(duration=selection_duration)
-            
-            socketio.emit('game_state_update', room.game_state.to_dict(), room=room_code, namespace='/')
-            
-            # Schedule truth/dare phase
-            def start_td():
-                time.sleep(selection_duration)
-                start_truth_dare_phase_handler(room_code)
-            
-            td_thread = threading.Thread(target=start_td)
-            td_thread.daemon = True
-            td_thread.start()
-        elif minigame.check_all_voted():
-            # All voters have voted - check for tie
-            vote_counts = minigame.get_vote_counts()
-            
-            if len(vote_counts) == 2:
-                counts = list(vote_counts.values())
-                if counts[0] == counts[1]:
-                    # It's a tie - randomly pick loser
-                    loser = minigame.handle_tie()
-                else:
-                    # Someone has more votes
-                    loser = minigame.determine_loser()
-            else:
-                # One player has all or most votes
-                loser = minigame.determine_loser()
-            
-            if loser:
-                # Set loser as selected player
-                room.game_state.set_selected_player(loser.name)
-                
-                # Move to selection phase
-                selection_duration = room.settings['selection_duration']
-                room.game_state.start_selection(duration=selection_duration)
-                
-                socketio.emit('game_state_update', room.game_state.to_dict(), room=room_code, namespace='/')
-                
-                # Schedule truth/dare phase
-                def start_td():
-                    time.sleep(selection_duration)
-                    start_truth_dare_phase_handler(room_code)
-                
-                td_thread = threading.Thread(target=start_td)
-                td_thread.daemon = True
-                td_thread.start()
-        else:
-            # Just broadcast updated vote count
-            emit('game_state_update', room.game_state.to_dict(), room=room_code)
-    
     @socketio.on('vote_skip')
     def on_vote_skip(data):
         room_code = data.get('room')
@@ -551,23 +370,6 @@ def register_socket_events(socketio, game_manager):
                 'targets': successfully_added
             }, to=request.sid)
     
-    @socketio.on('disconnect')
-    def on_disconnect():
-        # Remove player from all rooms
-        updated_rooms = game_manager.remove_player_from_all_rooms(request.sid)
-        
-        # Broadcast updated state to affected rooms
-        for room_code in updated_rooms:
-            room = game_manager.get_room(room_code)
-            if room:
-                _broadcast_room_state(room_code, room)
-    
-    def _broadcast_room_state(room_code, room):
-        """Helper to broadcast room state to all players"""
-        if not room:
-            return
-        
-        emit('player_list', {
-            'players': room.get_player_names(),
-            'host_sid': room.host_sid
-        }, room=room_code)
+    # Expose helper functions for use by minigame_events
+    register_game_events.start_selection_or_minigame = start_selection_or_minigame
+    register_game_events.start_truth_dare_phase_handler = start_truth_dare_phase_handler

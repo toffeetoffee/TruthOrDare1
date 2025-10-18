@@ -1,7 +1,12 @@
+"""
+Game manager class - manages all game rooms.
+"""
+
 import string
 import random
-from Model.room import Room
-from Model.player import Player
+from Model.structural.room import Room
+from Model.entities.player import Player
+
 
 class GameManager:
     """Manages all game rooms"""

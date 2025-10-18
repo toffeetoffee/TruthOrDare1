@@ -1,4 +1,9 @@
-from Model.truth_dare_list import TruthDareList
+"""
+Player entity class.
+"""
+
+from Model.content.truth_dare_list import TruthDareList
+
 
 class Player:
     """Represents a player in the game"""
@@ -24,7 +29,7 @@ class Player:
     
     def can_submit_more(self):
         """Check if player can submit more truths/dares this round"""
-        from Model.scoring_system import ScoringSystem
+        from Model.systems.scoring_system import ScoringSystem
         return self.submissions_this_round < ScoringSystem.MAX_SUBMISSIONS_PER_ROUND
     
     def to_dict(self):

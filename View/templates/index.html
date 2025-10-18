@@ -67,7 +67,7 @@
     </label>
     <button type="submit">Create New Room</button>
   </form>
-  <img src="/static/agnes.jpeg" alt="Truth or Dare Logo" style="display:block; margin: 0 auto 20px; max-width:150px;" onclick="enlargeImg()"
+  <img src="{{ url_for('static', filename='images/agnes.jpeg') }}" alt="Truth or Dare Logo" style="display:block; margin: 0 auto 20px; max-width:150px;" onclick="enlargeImg()"
             id="img1"/>
   <form action="/join" method="post">
     <label>

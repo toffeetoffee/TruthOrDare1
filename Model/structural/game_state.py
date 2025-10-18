@@ -1,4 +1,9 @@
+"""
+Game state management class.
+"""
+
 from datetime import datetime, timedelta
+
 
 class GameState:
     """Tracks the current game state"""

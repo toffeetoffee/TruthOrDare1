@@ -1,4 +1,10 @@
+"""
+HTTP routes for the application.
+"""
+
 from flask import render_template, request, redirect, url_for
+from Model.structural.room import Room
+
 
 def register_routes(app, game_manager):
     """Register Flask routes"""
@@ -26,8 +32,6 @@ def register_routes(app, game_manager):
         
         # Create room if it doesn't exist
         if not game_manager.room_exists(code):
-            game_manager.rooms[code] = game_manager.rooms.get(code) or type('Room', (), {'code': code, 'host_sid': None, 'players': []})()
-            from Model.room import Room
             game_manager.rooms[code] = Room(code)
         
         return redirect(url_for('room', code=code, name=name))
@@ -42,7 +46,6 @@ def register_routes(app, game_manager):
         
         # Create room if it doesn't exist
         if not game_manager.room_exists(code):
-            from Model.room import Room
             game_manager.rooms[code] = Room(code)
         
         return render_template('room.html', code=code, name=name)

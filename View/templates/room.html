@@ -4,7 +4,7 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>Room {{ code }}</title>
-  <link rel="stylesheet" href="{{ url_for('static', filename='room_styles.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/room_styles.css') }}">
 </head>
 <body>
   <h1>Dare or Dare</h1>
@@ -281,6 +281,6 @@
     const ROOM_CODE = '{{ code }}';
     const PLAYER_NAME = '{{ name }}';
   </script>
-  <script src="{{ url_for('static', filename='room_script.js') }}"></script>
+  <script src="{{ url_for('static', filename='js/room_script.js') }}"></script>
 </body>
 </html>

@@ -1,6 +1,12 @@
+"""
+Manages truths and dares for a player.
+"""
+
 import json
 import os
-from Model.truth_dare import Truth, Dare
+from Model.content.truth import Truth
+from Model.content.dare import Dare
+
 
 class TruthDareList:
     """Manages truths and dares for a player"""
@@ -11,12 +17,12 @@ class TruthDareList:
         self._load_defaults()
     
     def _load_defaults(self):
-        """Load default truths and dares from file"""
+        """Load default truths and dares from config file"""
         try:
-            # Get the path relative to this file
+            # Get the path to config/default_truths_dares.json
             current_dir = os.path.dirname(os.path.abspath(__file__))
-            parent_dir = os.path.dirname(current_dir)
-            file_path = os.path.join(parent_dir, 'default_truths_dares.json')
+            project_root = os.path.dirname(os.path.dirname(os.path.dirname(current_dir)))
+            file_path = os.path.join(project_root, 'config', 'default_truths_dares.json')
             
             with open(file_path, 'r') as f:
                 data = json.load(f)
