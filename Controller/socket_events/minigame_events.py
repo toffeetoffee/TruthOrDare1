@@ -6,16 +6,11 @@ from flask_socketio import emit
 from flask import request
 import threading
 import time
+from Controller.socket_events.game_events import start_truth_dare_phase_handler
 
 
-def register_minigame_events(socketio, game_manager, start_truth_dare_phase_handler):
-    """Register minigame-related socket events
-    
-    Args:
-        socketio: SocketIO instance
-        game_manager: GameManager instance
-        start_truth_dare_phase_handler: Function from game_events to start truth/dare phase
-    """
+def register_minigame_events(socketio, game_manager):
+    """Register minigame-related socket events"""
     
     @socketio.on('minigame_vote')
     def on_minigame_vote(data):

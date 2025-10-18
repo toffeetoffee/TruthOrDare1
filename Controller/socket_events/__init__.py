@@ -14,12 +14,8 @@ def register_socket_events(socketio, game_manager):
     register_room_events(socketio, game_manager)
     
     # Register game events (start, restart, submissions, etc.)
+    # This must be called before minigame_events since minigame_events imports from it
     register_game_events(socketio, game_manager)
     
     # Register minigame events (voting)
-    # Pass the helper function from game_events
-    register_minigame_events(
-        socketio, 
-        game_manager, 
-        register_game_events.start_truth_dare_phase_handler
-    )
+    register_minigame_events(socketio, game_manager)
