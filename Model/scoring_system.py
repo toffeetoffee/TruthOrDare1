@@ -1,8 +1,3 @@
-"""
-Scoring system for the game.
-"""
-
-
 class ScoringSystem:
     """Defines scoring rules and point values"""
     

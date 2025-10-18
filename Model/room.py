@@ -1,10 +1,5 @@
-"""
-Game room class.
-"""
-
-from Model.entities.player import Player
-from Model.structural.game_state import GameState
-
+from Model.player import Player
+from Model.game_state import GameState
 
 class Room:
     """Represents a game room"""

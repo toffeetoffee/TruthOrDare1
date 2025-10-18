@@ -1,8 +1,3 @@
-"""
-Base class for minigames.
-"""
-
-
 class Minigame:
     """Base class for minigames"""
     
@@ -13,8 +8,6 @@ class Minigame:
         self.loser = None
         self.is_complete = False
         self.total_voters = 0  # Total number of non-participants who can vote
-        self.name = "Minigame"
-        self.description = ""
     
     def add_participant(self, player):
         """Add a participant to the minigame"""
@@ -118,7 +111,7 @@ class Minigame:
     def to_dict(self):
         """Convert to dictionary format"""
         return {
-            'type': 'minigame',
+            'type': 'staring_contest',
             'participants': self.get_participant_names(),
             'votes': self.votes,
             'vote_count': len(self.votes),
@@ -128,3 +121,12 @@ class Minigame:
             'loser': self.loser.name if self.loser else None,
             'is_complete': self.is_complete
         }
+
+
+class StaringContest(Minigame):
+    """Staring contest minigame - vote for who blinked first"""
+    
+    def __init__(self):
+        super().__init__()
+        self.name = "Staring Contest"
+        self.description = "Who will blink first?"

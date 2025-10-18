@@ -3,9 +3,9 @@ from flask import request
 import threading
 import time
 import random
-from Model.systems.scoring_system import ScoringSystem
-from Model.records.round_record import RoundRecord
-from Model.minigames.minigame import StaringContest
+from Model.scoring_system import ScoringSystem
+from Model.round_record import RoundRecord
+from Model.minigame import StaringContest
 
 def register_socket_events(socketio, game_manager):
     """Register SocketIO event handlers"""

@@ -1,8 +1,3 @@
-"""
-Round record class for tracking game history.
-"""
-
-
 class RoundRecord:
     """Records information about a completed round"""
     

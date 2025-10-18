@@ -1,7 +1,3 @@
-"""
-Base class for truth or dare items.
-"""
-
 class TruthDare:
     """Base class for truth or dare items"""
     
@@ -15,13 +11,26 @@ class TruthDare:
         self.text = text
         self.is_default = is_default
         self.submitted_by = submitted_by
-        self.type = None  # Will be set by subclasses
     
     def to_dict(self):
-        """Convert to dictionary format"""
         return {
             'text': self.text,
             'is_default': self.is_default,
-            'submitted_by': self.submitted_by,
-            'type': self.type
+            'submitted_by': self.submitted_by
         }
+
+
+class Truth(TruthDare):
+    """Represents a truth question"""
+    
+    def __init__(self, text, is_default=False, submitted_by=None):
+        super().__init__(text, is_default, submitted_by)
+        self.type = 'truth'
+
+
+class Dare(TruthDare):
+    """Represents a dare challenge"""
+    
+    def __init__(self, text, is_default=False, submitted_by=None):
+        super().__init__(text, is_default, submitted_by)
+        self.type = 'dare'

@@ -1,17 +1,11 @@
-"""
-Main application file for Truth or Dare game.
-"""
-
 from flask import Flask
 from flask_socketio import SocketIO
-from Model.structural.game_manager import GameManager
+from Model.game_manager import GameManager
 from Controller.routes import register_routes
 from Controller.socket_events import register_socket_events
 
-# Initialize Flask app with updated paths
-app = Flask(__name__, 
-            template_folder='View/templates',
-            static_folder='View/static')
+# Initialize Flask app
+app = Flask(__name__, template_folder='View')
 app.config['SECRET_KEY'] = 'prts-is-watching-you'
 
 # Initialize SocketIO
