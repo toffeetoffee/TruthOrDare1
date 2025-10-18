@@ -57,6 +57,16 @@ socket.on('default_lists_updated', (data) => {
   }
 });
 
+// Preset loaded event
+socket.on('preset_loaded', (data) => {
+  alert(data.message);
+});
+
+// Preset error event
+socket.on('preset_error', (data) => {
+  alert('Error: ' + data.message);
+});
+
 // Update player list
 socket.on('player_list', (data) => {
   if (!data.players || data.players.length === 0) {
@@ -774,4 +784,85 @@ function removeDefaultItems(type) {
       texts: textsToRemove
     });
   }
+}
+
+// Save preset to file
+function savePreset(type) {
+  const items = type === 'truth' ? defaultTruths : defaultDares;
+  
+  if (items.length === 0) {
+    alert(`No ${type}s to save!`);
+    return;
+  }
+  
+  // Create preset object
+  const preset = {
+    truths: type === 'truth' ? items : [],
+    dares: type === 'dare' ? items : []
+  };
+  
+  // Convert to JSON
+  const jsonString = JSON.stringify(preset, null, 2);
+  
+  // Create blob and download
+  const blob = new Blob([jsonString], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `${type}s_preset_${new Date().toISOString().split('T')[0]}.json`;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}
+
+// Trigger file input for loading preset
+function triggerLoadPreset(type) {
+  const fileInput = document.getElementById(`load-preset-${type}s`);
+  fileInput.click();
+}
+
+// Load preset from file
+function loadPresetFile(event, type) {
+  const file = event.target.files[0];
+  if (!file) {
+    return;
+  }
+  
+  // Check file type
+  if (!file.name.endsWith('.json')) {
+    alert('Please select a JSON file');
+    event.target.value = ''; // Reset file input
+    return;
+  }
+  
+  // Read file
+  const reader = new FileReader();
+  reader.onload = function(e) {
+    try {
+      const fileContent = e.target.result;
+      
+      // Basic validation
+      JSON.parse(fileContent); // Will throw if invalid JSON
+      
+      // Send to server
+      socket.emit('load_preset_file', {
+        room: ROOM_CODE,
+        file_data: fileContent
+      });
+      
+    } catch (error) {
+      alert('Invalid JSON file: ' + error.message);
+    }
+    
+    // Reset file input
+    event.target.value = '';
+  };
+  
+  reader.onerror = function() {
+    alert('Error reading file');
+    event.target.value = '';
+  };
+  
+  reader.readAsText(file);
 }

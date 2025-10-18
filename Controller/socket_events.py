@@ -462,6 +462,75 @@ def register_socket_events(socketio, game_manager):
             'dares': room.get_default_dares()
         }, room=room_code)
     
+    @socketio.on('load_preset_file')
+    def on_load_preset_file(data):
+        room_code = data.get('room')
+        file_data = data.get('file_data')  # JSON string
+        
+        if not room_code or not file_data:
+            emit('preset_error', {'message': 'Invalid file data'}, to=request.sid)
+            return
+        
+        room = game_manager.get_room(room_code)
+        if not room:
+            emit('preset_error', {'message': 'Room not found'}, to=request.sid)
+            return
+        
+        # Only host can load presets
+        if not room.is_host(request.sid):
+            emit('preset_error', {'message': 'Only host can load presets'}, to=request.sid)
+            return
+        
+        try:
+            # Parse JSON
+            import json
+            preset = json.loads(file_data)
+            
+            # Validate structure
+            if 'truths' not in preset or 'dares' not in preset:
+                emit('preset_error', {'message': 'Invalid preset format: missing truths or dares'}, to=request.sid)
+                return
+            
+            if not isinstance(preset['truths'], list) or not isinstance(preset['dares'], list):
+                emit('preset_error', {'message': 'Invalid preset format: truths and dares must be arrays'}, to=request.sid)
+                return
+            
+            # Validate all items are strings
+            for truth in preset['truths']:
+                if not isinstance(truth, str):
+                    emit('preset_error', {'message': 'Invalid preset format: all truths must be strings'}, to=request.sid)
+                    return
+            
+            for dare in preset['dares']:
+                if not isinstance(dare, str):
+                    emit('preset_error', {'message': 'Invalid preset format: all dares must be strings'}, to=request.sid)
+                    return
+            
+            # Check for minimum requirements
+            if len(preset['truths']) == 0 and len(preset['dares']) == 0:
+                emit('preset_error', {'message': 'Preset must contain at least one truth or dare'}, to=request.sid)
+                return
+            
+            # Replace current defaults
+            room.default_truths = [t.strip() for t in preset['truths'] if t.strip()]
+            room.default_dares = [d.strip() for d in preset['dares'] if d.strip()]
+            
+            # Broadcast updated lists to all players
+            emit('default_lists_updated', {
+                'truths': room.get_default_truths(),
+                'dares': room.get_default_dares()
+            }, room=room_code)
+            
+            # Send success message
+            emit('preset_loaded', {
+                'message': f'Preset loaded successfully! {len(room.default_truths)} truths and {len(room.default_dares)} dares.'
+            }, to=request.sid)
+            
+        except json.JSONDecodeError:
+            emit('preset_error', {'message': 'Invalid JSON format'}, to=request.sid)
+        except Exception as e:
+            emit('preset_error', {'message': f'Error loading preset: {str(e)}'}, to=request.sid)
+    
     @socketio.on('start_game')
     def on_start_game(data):
         room_code = data.get('room')
