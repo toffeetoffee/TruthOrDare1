@@ -31,6 +31,19 @@ class TruthDareList:
         except Exception as e:
             print(f"Warning: Could not load default truths/dares: {e}")
     
+    def set_custom_defaults(self, default_truths_list, default_dares_list):
+        """Set custom defaults instead of loading from file"""
+        self.truths = []
+        self.dares = []
+        
+        # Add custom default truths
+        for text in default_truths_list:
+            self.truths.append(Truth(text, is_default=True, submitted_by=None))
+        
+        # Add custom default dares
+        for text in default_dares_list:
+            self.dares.append(Dare(text, is_default=True, submitted_by=None))
+    
     def add_truth(self, text, submitted_by=None):
         """Add a custom truth"""
         self.truths.append(Truth(text, is_default=False, submitted_by=submitted_by))

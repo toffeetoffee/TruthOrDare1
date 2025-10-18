@@ -4,6 +4,10 @@ let hostSocketId = null;
 let gameState = { phase: 'lobby', remaining_time: 0 };
 let timerInterval = null;
 
+// Store default lists
+let defaultTruths = [];
+let defaultDares = [];
+
 // DOM elements
 const playerList = document.getElementById('player-list');
 const playerCount = document.getElementById('player-count');
@@ -22,6 +26,9 @@ socket.on('connect', () => {
   
   // Request current settings
   socket.emit('get_settings', { room: ROOM_CODE });
+  
+  // Request default lists
+  socket.emit('get_default_lists', { room: ROOM_CODE });
 });
 
 // Settings updated event
@@ -35,6 +42,18 @@ socket.on('settings_updated', (data) => {
     document.getElementById('setting-skip').value = data.settings.skip_duration || 5;
     document.getElementById('setting-maxrounds').value = data.settings.max_rounds || 10;
     document.getElementById('setting-minigame').value = data.settings.minigame_chance || 20;
+  }
+});
+
+// Default lists updated event
+socket.on('default_lists_updated', (data) => {
+  if (data.truths !== undefined) {
+    defaultTruths = data.truths;
+    renderDefaultList('truth');
+  }
+  if (data.dares !== undefined) {
+    defaultDares = data.dares;
+    renderDefaultList('dare');
   }
 });
 
@@ -569,4 +588,158 @@ function escapeHtml(text) {
   const div = document.createElement('div');
   div.textContent = text;
   return div.innerHTML;
+}
+
+// Settings Tab Management
+function showSettingsTab(tabName) {
+  // Remove active class from all tabs and contents
+  document.querySelectorAll('.settings-tab').forEach(tab => {
+    tab.classList.remove('active');
+  });
+  document.querySelectorAll('.settings-tab-content').forEach(content => {
+    content.classList.remove('active');
+  });
+  
+  // Add active class to selected tab and content
+  event.target.classList.add('active');
+  document.getElementById(`settings-tab-${tabName}`).classList.add('active');
+}
+
+// Render default list
+function renderDefaultList(type) {
+  const listContainer = document.getElementById(`default-${type}s-list`);
+  const items = type === 'truth' ? defaultTruths : defaultDares;
+  
+  if (items.length === 0) {
+    listContainer.innerHTML = `<div class="default-list-empty">No default ${type}s yet. Click "Add ${type === 'truth' ? 'Truth' : 'Dare'}" to add one.</div>`;
+    return;
+  }
+  
+  listContainer.innerHTML = items.map((text, index) => `
+    <div class="default-list-item" onclick="toggleItemSelection(event, '${type}', ${index})">
+      <input type="checkbox" 
+             id="default-${type}-${index}" 
+             data-type="${type}" 
+             data-text="${escapeHtml(text)}"
+             onclick="event.stopPropagation()">
+      <div class="default-list-item-text">${escapeHtml(text)}</div>
+    </div>
+  `).join('');
+}
+
+// Toggle item selection
+function toggleItemSelection(event, type, index) {
+  const checkbox = document.getElementById(`default-${type}-${index}`);
+  checkbox.checked = !checkbox.checked;
+  
+  // Update item styling
+  const item = event.currentTarget;
+  if (checkbox.checked) {
+    item.classList.add('selected');
+  } else {
+    item.classList.remove('selected');
+  }
+}
+
+// Select all items
+function selectAllItems(type) {
+  const checkboxes = document.querySelectorAll(`input[data-type="${type}"]`);
+  checkboxes.forEach(cb => {
+    cb.checked = true;
+    cb.closest('.default-list-item').classList.add('selected');
+  });
+}
+
+// Deselect all items
+function deselectAllItems(type) {
+  const checkboxes = document.querySelectorAll(`input[data-type="${type}"]`);
+  checkboxes.forEach(cb => {
+    cb.checked = false;
+    cb.closest('.default-list-item').classList.remove('selected');
+  });
+}
+
+// Add new default item
+function addDefaultItem(type) {
+  const text = prompt(`Enter a new default ${type}:`);
+  if (!text || !text.trim()) {
+    return;
+  }
+  
+  if (type === 'truth') {
+    socket.emit('add_default_truth', {
+      room: ROOM_CODE,
+      text: text.trim()
+    });
+  } else {
+    socket.emit('add_default_dare', {
+      room: ROOM_CODE,
+      text: text.trim()
+    });
+  }
+}
+
+// Edit selected default item
+function editDefaultItem(type) {
+  const checkboxes = document.querySelectorAll(`input[data-type="${type}"]:checked`);
+  
+  if (checkboxes.length === 0) {
+    alert('Please select one item to edit');
+    return;
+  }
+  
+  if (checkboxes.length > 1) {
+    alert('Please select only one item to edit');
+    return;
+  }
+  
+  const oldText = checkboxes[0].dataset.text;
+  const newText = prompt(`Edit ${type}:`, oldText);
+  
+  if (!newText || !newText.trim() || newText.trim() === oldText) {
+    return;
+  }
+  
+  if (type === 'truth') {
+    socket.emit('edit_default_truth', {
+      room: ROOM_CODE,
+      old_text: oldText,
+      new_text: newText.trim()
+    });
+  } else {
+    socket.emit('edit_default_dare', {
+      room: ROOM_CODE,
+      old_text: oldText,
+      new_text: newText.trim()
+    });
+  }
+}
+
+// Remove selected default items
+function removeDefaultItems(type) {
+  const checkboxes = document.querySelectorAll(`input[data-type="${type}"]:checked`);
+  
+  if (checkboxes.length === 0) {
+    alert('Please select at least one item to remove');
+    return;
+  }
+  
+  const count = checkboxes.length;
+  if (!confirm(`Are you sure you want to remove ${count} ${type}${count > 1 ? 's' : ''}?`)) {
+    return;
+  }
+  
+  const textsToRemove = Array.from(checkboxes).map(cb => cb.dataset.text);
+  
+  if (type === 'truth') {
+    socket.emit('remove_default_truths', {
+      room: ROOM_CODE,
+      texts: textsToRemove
+    });
+  } else {
+    socket.emit('remove_default_dares', {
+      room: ROOM_CODE,
+      texts: textsToRemove
+    });
+  }
 }

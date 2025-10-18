@@ -258,6 +258,180 @@ def register_socket_events(socketio, game_manager):
         # Send current settings to requester
         emit('settings_updated', {'settings': room.settings}, to=request.sid)
     
+    # Default lists management
+    @socketio.on('get_default_lists')
+    def on_get_default_lists(data):
+        room_code = data.get('room')
+        
+        if not room_code:
+            return
+        
+        room = game_manager.get_room(room_code)
+        if not room:
+            return
+        
+        # Send current default lists to requester
+        emit('default_lists_updated', {
+            'truths': room.get_default_truths(),
+            'dares': room.get_default_dares()
+        }, to=request.sid)
+    
+    @socketio.on('add_default_truth')
+    def on_add_default_truth(data):
+        room_code = data.get('room')
+        text = data.get('text', '').strip()
+        
+        if not room_code or not text:
+            return
+        
+        room = game_manager.get_room(room_code)
+        if not room:
+            return
+        
+        # Only host can modify defaults
+        if not room.is_host(request.sid):
+            return
+        
+        # Add the truth
+        success = room.add_default_truth(text)
+        
+        if success:
+            # Broadcast updated lists to all players
+            emit('default_lists_updated', {
+                'truths': room.get_default_truths(),
+                'dares': room.get_default_dares()
+            }, room=room_code)
+    
+    @socketio.on('add_default_dare')
+    def on_add_default_dare(data):
+        room_code = data.get('room')
+        text = data.get('text', '').strip()
+        
+        if not room_code or not text:
+            return
+        
+        room = game_manager.get_room(room_code)
+        if not room:
+            return
+        
+        # Only host can modify defaults
+        if not room.is_host(request.sid):
+            return
+        
+        # Add the dare
+        success = room.add_default_dare(text)
+        
+        if success:
+            # Broadcast updated lists to all players
+            emit('default_lists_updated', {
+                'truths': room.get_default_truths(),
+                'dares': room.get_default_dares()
+            }, room=room_code)
+    
+    @socketio.on('edit_default_truth')
+    def on_edit_default_truth(data):
+        room_code = data.get('room')
+        old_text = data.get('old_text', '').strip()
+        new_text = data.get('new_text', '').strip()
+        
+        if not room_code or not old_text or not new_text:
+            return
+        
+        room = game_manager.get_room(room_code)
+        if not room:
+            return
+        
+        # Only host can modify defaults
+        if not room.is_host(request.sid):
+            return
+        
+        # Edit the truth
+        success = room.edit_default_truth(old_text, new_text)
+        
+        if success:
+            # Broadcast updated lists to all players
+            emit('default_lists_updated', {
+                'truths': room.get_default_truths(),
+                'dares': room.get_default_dares()
+            }, room=room_code)
+    
+    @socketio.on('edit_default_dare')
+    def on_edit_default_dare(data):
+        room_code = data.get('room')
+        old_text = data.get('old_text', '').strip()
+        new_text = data.get('new_text', '').strip()
+        
+        if not room_code or not old_text or not new_text:
+            return
+        
+        room = game_manager.get_room(room_code)
+        if not room:
+            return
+        
+        # Only host can modify defaults
+        if not room.is_host(request.sid):
+            return
+        
+        # Edit the dare
+        success = room.edit_default_dare(old_text, new_text)
+        
+        if success:
+            # Broadcast updated lists to all players
+            emit('default_lists_updated', {
+                'truths': room.get_default_truths(),
+                'dares': room.get_default_dares()
+            }, room=room_code)
+    
+    @socketio.on('remove_default_truths')
+    def on_remove_default_truths(data):
+        room_code = data.get('room')
+        texts_to_remove = data.get('texts', [])
+        
+        if not room_code or not texts_to_remove:
+            return
+        
+        room = game_manager.get_room(room_code)
+        if not room:
+            return
+        
+        # Only host can modify defaults
+        if not room.is_host(request.sid):
+            return
+        
+        # Remove the truths
+        room.remove_default_truths(texts_to_remove)
+        
+        # Broadcast updated lists to all players
+        emit('default_lists_updated', {
+            'truths': room.get_default_truths(),
+            'dares': room.get_default_dares()
+        }, room=room_code)
+    
+    @socketio.on('remove_default_dares')
+    def on_remove_default_dares(data):
+        room_code = data.get('room')
+        texts_to_remove = data.get('texts', [])
+        
+        if not room_code or not texts_to_remove:
+            return
+        
+        room = game_manager.get_room(room_code)
+        if not room:
+            return
+        
+        # Only host can modify defaults
+        if not room.is_host(request.sid):
+            return
+        
+        # Remove the dares
+        room.remove_default_dares(texts_to_remove)
+        
+        # Broadcast updated lists to all players
+        emit('default_lists_updated', {
+            'truths': room.get_default_truths(),
+            'dares': room.get_default_dares()
+        }, room=room_code)
+    
     @socketio.on('start_game')
     def on_start_game(data):
         room_code = data.get('room')

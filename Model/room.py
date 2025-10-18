@@ -1,3 +1,5 @@
+import json
+import os
 from Model.player import Player
 from Model.game_state import GameState
 
@@ -11,6 +13,11 @@ class Room:
         self.game_state = GameState()
         self.round_history = []  # List of RoundRecord objects
         
+        # Load default truths and dares for this room
+        self.default_truths = []
+        self.default_dares = []
+        self._load_default_lists()
+        
         # Game settings (configurable by host)
         self.settings = {
             'countdown_duration': 10,
@@ -21,6 +28,86 @@ class Room:
             'max_rounds': 10,
             'minigame_chance': 20  # Percentage (0-100)
         }
+    
+    def _load_default_lists(self):
+        """Load default truths and dares from file"""
+        try:
+            current_dir = os.path.dirname(os.path.abspath(__file__))
+            parent_dir = os.path.dirname(current_dir)
+            file_path = os.path.join(parent_dir, 'default_truths_dares.json')
+            
+            with open(file_path, 'r') as f:
+                data = json.load(f)
+            
+            self.default_truths = data.get('truths', [])
+            self.default_dares = data.get('dares', [])
+        except Exception as e:
+            print(f"Warning: Could not load default truths/dares: {e}")
+            # Use hardcoded defaults as fallback
+            self.default_truths = [
+                "What is your biggest fear?",
+                "What is the most embarrassing thing you've ever done?"
+            ]
+            self.default_dares = [
+                "Do 10 pushups",
+                "Sing a song loudly"
+            ]
+    
+    def get_default_truths(self):
+        """Get list of default truths"""
+        return self.default_truths.copy()
+    
+    def get_default_dares(self):
+        """Get list of default dares"""
+        return self.default_dares.copy()
+    
+    def add_default_truth(self, text):
+        """Add a new default truth"""
+        if text and text not in self.default_truths:
+            self.default_truths.append(text)
+            return True
+        return False
+    
+    def add_default_dare(self, text):
+        """Add a new default dare"""
+        if text and text not in self.default_dares:
+            self.default_dares.append(text)
+            return True
+        return False
+    
+    def edit_default_truth(self, old_text, new_text):
+        """Edit an existing default truth"""
+        try:
+            index = self.default_truths.index(old_text)
+            if new_text and new_text not in self.default_truths:
+                self.default_truths[index] = new_text
+                return True
+        except ValueError:
+            pass
+        return False
+    
+    def edit_default_dare(self, old_text, new_text):
+        """Edit an existing default dare"""
+        try:
+            index = self.default_dares.index(old_text)
+            if new_text and new_text not in self.default_dares:
+                self.default_dares[index] = new_text
+                return True
+        except ValueError:
+            pass
+        return False
+    
+    def remove_default_truths(self, texts_to_remove):
+        """Remove multiple default truths"""
+        for text in texts_to_remove:
+            if text in self.default_truths:
+                self.default_truths.remove(text)
+    
+    def remove_default_dares(self, texts_to_remove):
+        """Remove multiple default dares"""
+        for text in texts_to_remove:
+            if text in self.default_dares:
+                self.default_dares.remove(text)
     
     def update_settings(self, new_settings):
         """Update room settings"""
@@ -36,6 +123,11 @@ class Room:
         """Add a player to the room"""
         # Check if player already exists
         if not any(p.socket_id == player.socket_id for p in self.players):
+            # Initialize player's truth/dare list with room's defaults
+            player.truth_dare_list.set_custom_defaults(
+                self.default_truths.copy(),
+                self.default_dares.copy()
+            )
             self.players.append(player)
         
         # Set host if this is the first player
@@ -98,6 +190,11 @@ class Room:
         for player in self.players:
             player.score = 0
             player.submissions_this_round = 0
+            # Reinitialize truth/dare lists with current defaults
+            player.truth_dare_list.set_custom_defaults(
+                self.default_truths.copy(),
+                self.default_dares.copy()
+            )
         
         # Clear round history
         self.round_history = []
