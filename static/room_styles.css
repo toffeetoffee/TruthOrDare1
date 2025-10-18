@@ -468,6 +468,56 @@ button:disabled {
   color: #333;
 }
 
+/* Global Preset Controls */
+.preset-controls-global {
+  background: #f8f9fa;
+  border: 2px solid #dee2e6;
+  border-radius: 8px;
+  padding: 16px;
+  margin-bottom: 20px;
+}
+
+.preset-info {
+  font-size: 13px;
+  color: #666;
+  margin-bottom: 12px;
+  text-align: center;
+}
+
+.preset-buttons {
+  display: flex;
+  gap: 10px;
+}
+
+.preset-buttons button {
+  flex: 1;
+  padding: 12px 16px;
+  font-size: 14px;
+  font-weight: 500;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.preset-buttons .btn-save-preset {
+  background: #17a2b8;
+  color: white;
+}
+
+.preset-buttons .btn-save-preset:hover {
+  background: #138496;
+}
+
+.preset-buttons .btn-load-preset {
+  background: #6f42c1;
+  color: white;
+}
+
+.preset-buttons .btn-load-preset:hover {
+  background: #5a32a3;
+}
+
 /* Settings Tabs */
 .settings-tabs {
   display: flex;
@@ -814,31 +864,6 @@ button:disabled {
 }
 
 /* List Management Styles */
-.preset-controls {
-  display: flex;
-  gap: 8px;
-  margin-bottom: 16px;
-  padding-bottom: 16px;
-  border-bottom: 2px solid #e0e0e0;
-}
-
-.preset-controls button {
-  flex: 1;
-  padding: 10px 16px;
-  font-size: 14px;
-  font-weight: 500;
-}
-
-.btn-save-preset {
-  background: #17a2b8;
-  color: white;
-}
-
-.btn-load-preset {
-  background: #6f42c1;
-  color: white;
-}
-
 .list-controls {
   display: flex;
   gap: 8px;

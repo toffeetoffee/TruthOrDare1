@@ -45,6 +45,16 @@
     <div class="modal-content">
       <div class="modal-header">Game Settings</div>
       
+      <!-- Preset Controls (above tabs) -->
+      <div class="preset-controls-global">
+        <div class="preset-info">Save or load a preset file containing both truths and dares</div>
+        <div class="preset-buttons">
+          <button class="btn-save-preset" onclick="savePreset()">💾 Save Preset (Both Lists)</button>
+          <button class="btn-load-preset" onclick="triggerLoadPreset()">📁 Load Preset (Both Lists)</button>
+          <input type="file" id="load-preset-file" accept=".json" style="display: none;" onchange="loadPresetFile(event)">
+        </div>
+      </div>
+      
       <!-- Settings Tabs -->
       <div class="settings-tabs">
         <button class="settings-tab active" onclick="showSettingsTab('game')">Game Settings</button>
@@ -99,12 +109,6 @@
       
       <!-- Default Truths Tab -->
       <div id="settings-tab-truths" class="settings-tab-content">
-        <div class="preset-controls">
-          <button class="btn-save-preset" onclick="savePreset('truth')">💾 Save Preset</button>
-          <button class="btn-load-preset" onclick="triggerLoadPreset('truth')">📁 Load Preset</button>
-          <input type="file" id="load-preset-truths" accept=".json" style="display: none;" onchange="loadPresetFile(event, 'truth')">
-        </div>
-        
         <div class="list-controls">
           <button class="btn-add" onclick="addDefaultItem('truth')">+ Add Truth</button>
           <button class="btn-edit" onclick="editDefaultItem('truth')">Edit Selected</button>
@@ -123,12 +127,6 @@
       
       <!-- Default Dares Tab -->
       <div id="settings-tab-dares" class="settings-tab-content">
-        <div class="preset-controls">
-          <button class="btn-save-preset" onclick="savePreset('dare')">💾 Save Preset</button>
-          <button class="btn-load-preset" onclick="triggerLoadPreset('dare')">📁 Load Preset</button>
-          <input type="file" id="load-preset-dares" accept=".json" style="display: none;" onchange="loadPresetFile(event, 'dare')">
-        </div>
-        
         <div class="list-controls">
           <button class="btn-add" onclick="addDefaultItem('dare')">+ Add Dare</button>
           <button class="btn-edit" onclick="editDefaultItem('dare')">Edit Selected</button>

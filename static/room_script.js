@@ -787,18 +787,17 @@ function removeDefaultItems(type) {
 }
 
 // Save preset to file
-function savePreset(type) {
-  const items = type === 'truth' ? defaultTruths : defaultDares;
-  
-  if (items.length === 0) {
-    alert(`No ${type}s to save!`);
+function savePreset() {
+  // Check if we have any data to save
+  if (defaultTruths.length === 0 && defaultDares.length === 0) {
+    alert('No truths or dares to save!');
     return;
   }
   
-  // Create preset object
+  // Create preset object with BOTH lists
   const preset = {
-    truths: type === 'truth' ? items : [],
-    dares: type === 'dare' ? items : []
+    truths: defaultTruths,
+    dares: defaultDares
   };
   
   // Convert to JSON
@@ -809,21 +808,24 @@ function savePreset(type) {
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
   a.href = url;
-  a.download = `${type}s_preset_${new Date().toISOString().split('T')[0]}.json`;
+  a.download = `truth_dare_preset_${new Date().toISOString().split('T')[0]}.json`;
   document.body.appendChild(a);
   a.click();
   document.body.removeChild(a);
   URL.revokeObjectURL(url);
+  
+  // Show confirmation
+  alert(`Preset saved!\n${defaultTruths.length} truths and ${defaultDares.length} dares exported.`);
 }
 
 // Trigger file input for loading preset
-function triggerLoadPreset(type) {
-  const fileInput = document.getElementById(`load-preset-${type}s`);
+function triggerLoadPreset() {
+  const fileInput = document.getElementById('load-preset-file');
   fileInput.click();
 }
 
 // Load preset from file
-function loadPresetFile(event, type) {
+function loadPresetFile(event) {
   const file = event.target.files[0];
   if (!file) {
     return;
@@ -833,6 +835,12 @@ function loadPresetFile(event, type) {
   if (!file.name.endsWith('.json')) {
     alert('Please select a JSON file');
     event.target.value = ''; // Reset file input
+    return;
+  }
+  
+  // Confirm before loading (since it will replace current lists)
+  if (!confirm('Loading a preset will replace your current truths and dares lists. Continue?')) {
+    event.target.value = '';
     return;
   }
   

@@ -511,7 +511,7 @@ def register_socket_events(socketio, game_manager):
                 emit('preset_error', {'message': 'Preset must contain at least one truth or dare'}, to=request.sid)
                 return
             
-            # Replace current defaults
+            # Replace BOTH defaults
             room.default_truths = [t.strip() for t in preset['truths'] if t.strip()]
             room.default_dares = [d.strip() for d in preset['dares'] if d.strip()]
             
@@ -523,7 +523,7 @@ def register_socket_events(socketio, game_manager):
             
             # Send success message
             emit('preset_loaded', {
-                'message': f'Preset loaded successfully! {len(room.default_truths)} truths and {len(room.default_dares)} dares.'
+                'message': f'Preset loaded successfully!\n{len(room.default_truths)} truths and {len(room.default_dares)} dares loaded.'
             }, to=request.sid)
             
         except json.JSONDecodeError:
