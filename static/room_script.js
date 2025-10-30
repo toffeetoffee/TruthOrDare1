@@ -42,6 +42,7 @@ socket.on('settings_updated', (data) => {
     document.getElementById('setting-skip').value = data.settings.skip_duration || 5;
     document.getElementById('setting-maxrounds').value = data.settings.max_rounds || 10;
     document.getElementById('setting-minigame').value = data.settings.minigame_chance || 20;
+    document.getElementById('setting-ai-generation').checked = data.settings.ai_generation_enabled || false;
   }
 });
 
@@ -126,7 +127,7 @@ socket.on('game_state_update', (data) => {
 socket.on('submission_success', (data) => {
   const successDiv = document.getElementById('submission-success');
   const targetList = data.targets.join(', ');
-  successDiv.textContent = `✓ Added ${data.type}: "${data.text}" to ${targetList}`;
+  successDiv.textContent = `âœ“ Added ${data.type}: "${data.text}" to ${targetList}`;
   successDiv.style.display = 'block';
   
   // Clear form
@@ -336,7 +337,7 @@ function updateGameUI() {
       if (gameState.list_empty) {
         // List empty - skip auto-activated
         voteSkipButton.disabled = true;
-        voteSkipButton.textContent = '⚠️ List Empty - Skip Auto-Activated!';
+        voteSkipButton.textContent = 'âš ï¸ List Empty - Skip Auto-Activated!';
         voteSkipButton.style.background = '#ffc107';
         voteSkipButton.style.color = '#000';
       } else if (gameState.skip_activated) {
@@ -385,7 +386,7 @@ function displayTopPlayers() {
   topPlayersList.innerHTML = gameState.top_players
     .map((player, index) => {
       const rank = index + 1;
-      const medal = rank === 1 ? '🥇' : rank === 2 ? '🥈' : rank === 3 ? '🥉' : '';
+      const medal = rank === 1 ? 'ðŸ¥‡' : rank === 2 ? 'ðŸ¥ˆ' : rank === 3 ? 'ðŸ¥‰' : '';
       return `
         <div class="top-player">
           <span class="player-rank">${medal} #${rank}</span>
@@ -509,7 +510,8 @@ function saveSettings() {
     truth_dare_duration: parseInt(document.getElementById('setting-truthdare').value),
     skip_duration: parseInt(document.getElementById('setting-skip').value),
     max_rounds: parseInt(document.getElementById('setting-maxrounds').value),
-    minigame_chance: parseInt(document.getElementById('setting-minigame').value)
+    minigame_chance: parseInt(document.getElementById('setting-minigame').value),
+    ai_generation_enabled: document.getElementById('setting-ai-generation').checked
   };
   
   // Validate settings

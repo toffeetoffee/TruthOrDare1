@@ -6,6 +6,8 @@ import random
 from Model.scoring_system import ScoringSystem
 from Model.round_record import RoundRecord
 from Model.minigame import StaringContest
+from Model.ai_generator import get_ai_generator
+from Model.truth_dare import Truth, Dare
 
 def register_socket_events(socketio, game_manager):
     """Register SocketIO event handlers"""
@@ -87,15 +89,38 @@ def register_socket_events(socketio, game_manager):
                     selected_player.truth_dare_list.truths.remove(selected_item)
                     room.game_state.set_current_truth_dare(selected_item.to_dict())
                 else:
-                    # List is empty!
-                    list_was_empty = True
-                    room.game_state.list_empty = True
-                    room.game_state.set_current_truth_dare({
-                        'text': f'{selected_player.name} has no more truths available!',
-                        'type': 'truth',
-                        'is_default': False,
-                        'submitted_by': None
-                    })
+                    # List is empty! Try AI generation if enabled
+                    ai_enabled = room.settings.get('ai_generation_enabled', False)
+                    generated_text = None
+                    
+                    if ai_enabled:
+                        # Get AI generator and try to generate a new truth
+                        ai_gen = get_ai_generator()
+                        if ai_gen.enabled:
+                            # Get all existing truths as plain text for context
+                            existing_truths = [t.text for t in selected_player.truth_dare_list.truths]
+                            # Also include default truths for more context
+                            existing_truths.extend(room.default_truths)
+                            
+                            generated_text = ai_gen.generate_truth(existing_truths)
+                            
+                            if generated_text:
+                                # Successfully generated! Add it to the player's list and use it
+                                new_truth = Truth(generated_text, is_default=False, submitted_by='AI')
+                                selected_player.truth_dare_list.truths.append(new_truth)
+                                room.game_state.set_current_truth_dare(new_truth.to_dict())
+                                list_was_empty = False  # Successfully generated, so list wasn't really empty
+                    
+                    # If AI didn't generate (disabled or failed), use fallback message
+                    if generated_text is None:
+                        list_was_empty = True
+                        room.game_state.list_empty = True
+                        room.game_state.set_current_truth_dare({
+                            'text': f'{selected_player.name} has no more truths available!',
+                            'type': 'truth',
+                            'is_default': False,
+                            'submitted_by': None
+                        })
             else:  # dare
                 dares = selected_player.truth_dare_list.dares
                 if dares:
@@ -103,15 +128,38 @@ def register_socket_events(socketio, game_manager):
                     selected_player.truth_dare_list.dares.remove(selected_item)
                     room.game_state.set_current_truth_dare(selected_item.to_dict())
                 else:
-                    # List is empty!
-                    list_was_empty = True
-                    room.game_state.list_empty = True
-                    room.game_state.set_current_truth_dare({
-                        'text': f'{selected_player.name} has no more dares available!',
-                        'type': 'dare',
-                        'is_default': False,
-                        'submitted_by': None
-                    })
+                    # List is empty! Try AI generation if enabled
+                    ai_enabled = room.settings.get('ai_generation_enabled', False)
+                    generated_text = None
+                    
+                    if ai_enabled:
+                        # Get AI generator and try to generate a new dare
+                        ai_gen = get_ai_generator()
+                        if ai_gen.enabled:
+                            # Get all existing dares as plain text for context
+                            existing_dares = [d.text for d in selected_player.truth_dare_list.dares]
+                            # Also include default dares for more context
+                            existing_dares.extend(room.default_dares)
+                            
+                            generated_text = ai_gen.generate_dare(existing_dares)
+                            
+                            if generated_text:
+                                # Successfully generated! Add it to the player's list and use it
+                                new_dare = Dare(generated_text, is_default=False, submitted_by='AI')
+                                selected_player.truth_dare_list.dares.append(new_dare)
+                                room.game_state.set_current_truth_dare(new_dare.to_dict())
+                                list_was_empty = False  # Successfully generated, so list wasn't really empty
+                    
+                    # If AI didn't generate (disabled or failed), use fallback message
+                    if generated_text is None:
+                        list_was_empty = True
+                        room.game_state.list_empty = True
+                        room.game_state.set_current_truth_dare({
+                            'text': f'{selected_player.name} has no more dares available!',
+                            'type': 'dare',
+                            'is_default': False,
+                            'submitted_by': None
+                        })
         
         # Start truth/dare phase with configurable duration
         td_duration = room.settings['truth_dare_duration']
