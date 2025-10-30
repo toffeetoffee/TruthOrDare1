@@ -4,4 +4,4 @@ eventlet
 gunicorn
 pytest
 pytest-flask
-google-generativeai
+google-genai

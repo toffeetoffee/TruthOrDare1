@@ -563,6 +563,13 @@ def register_socket_events(socketio, game_manager):
             room.default_truths = [t.strip() for t in preset['truths'] if t.strip()]
             room.default_dares = [d.strip() for d in preset['dares'] if d.strip()]
             
+            # CRITICAL: Update all existing players' truth/dare lists with the new defaults
+            for player in room.players:
+                player.truth_dare_list.set_custom_defaults(
+                    room.default_truths.copy(),
+                    room.default_dares.copy()
+                )
+            
             # Broadcast updated lists to all players
             emit('default_lists_updated', {
                 'truths': room.get_default_truths(),

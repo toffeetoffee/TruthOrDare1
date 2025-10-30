@@ -1,26 +1,30 @@
 import os
-import google.generativeai as genai
+from google import genai
 from typing import List, Optional
 
 class AIGenerator:
     """Handles AI generation of truths and dares using Gemini API"""
     
+    # Model optimized for free tier (30 RPM)
+    MODEL = "gemini-2.0-flash-lite"
+    
     def __init__(self):
-        """Initialize Gemini API with API key from environment"""
+        """Initialize Gemini API client with API key from environment"""
         api_key = os.environ.get('GEMINI_API_KEY')
         if not api_key:
             print("Warning: GEMINI_API_KEY not found in environment variables")
             self.enabled = False
+            self.client = None
             return
         
         try:
-            genai.configure(api_key=api_key)
-            self.model = genai.GenerativeModel('gemini-2.0-flash-lite')
+            self.client = genai.Client(api_key=api_key)
             self.enabled = True
             print("Gemini AI initialized successfully")
         except Exception as e:
             print(f"Error initializing Gemini AI: {e}")
             self.enabled = False
+            self.client = None
     
     def generate_truth(self, existing_truths: List[str]) -> Optional[str]:
         """
@@ -32,14 +36,20 @@ class AIGenerator:
         Returns:
             Generated truth question or None if generation fails
         """
-        if not self.enabled:
+        if not self.enabled or not self.client:
             return None
         
         prompt = self._build_truth_prompt(existing_truths)
         
         try:
-            response = self.model.generate_content(prompt)
-            generated_text = response.text.strip()
+            response = self.client.models.generate_content(
+                model=self.MODEL,
+                contents=prompt,
+                config={"max_output_tokens": 256}
+            )
+            
+            # Get text from response
+            generated_text = getattr(response, "text", str(response)).strip()
             
             # Remove quotes if present
             if generated_text.startswith('"') and generated_text.endswith('"'):
@@ -66,14 +76,20 @@ class AIGenerator:
         Returns:
             Generated dare challenge or None if generation fails
         """
-        if not self.enabled:
+        if not self.enabled or not self.client:
             return None
         
         prompt = self._build_dare_prompt(existing_dares)
         
         try:
-            response = self.model.generate_content(prompt)
-            generated_text = response.text.strip()
+            response = self.client.models.generate_content(
+                model=self.MODEL,
+                contents=prompt,
+                config={"max_output_tokens": 256}
+            )
+            
+            # Get text from response
+            generated_text = getattr(response, "text", str(response)).strip()
             
             # Remove quotes if present
             if generated_text.startswith('"') and generated_text.endswith('"'):
