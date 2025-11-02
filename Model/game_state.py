@@ -42,6 +42,7 @@ class GameState:
         self.selected_choice = None
         self.current_truth_dare = None
         self.minigame = None
+        self.list_empty = False
         self.skip_votes.clear()
         # Increment round
         self.current_round += 1
