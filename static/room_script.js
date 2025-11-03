@@ -42,7 +42,7 @@ socket.on('settings_updated', (data) => {
     document.getElementById('setting-skip').value = data.settings.skip_duration || 5;
     document.getElementById('setting-maxrounds').value = data.settings.max_rounds || 10;
     document.getElementById('setting-minigame').value = data.settings.minigame_chance || 20;
-    document.getElementById('setting-ai-generation').checked = data.settings.ai_generation_enabled || false;
+    document.getElementById('setting-ai-generation').checked = data.settings.ai_generation_enabled || true;
   }
 });
 

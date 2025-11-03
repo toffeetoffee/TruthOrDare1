@@ -27,7 +27,7 @@ class Room:
             'skip_duration': 5,
             'max_rounds': 10,
             'minigame_chance': 20,  # Percentage (0-100)
-            'ai_generation_enabled': False  # AI-powered truth/dare generation
+            'ai_generation_enabled': True  # AI-powered truth/dare generation
         }
     
     def _load_default_lists(self):
