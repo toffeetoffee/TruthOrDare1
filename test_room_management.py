@@ -439,7 +439,7 @@ class TestRoomInitialization:
         assert room.settings['skip_duration'] == 5
         assert room.settings['max_rounds'] == 10
         assert room.settings['minigame_chance'] == 20
-        assert room.settings['ai_generation_enabled'] == True
+        assert room.settings['ai_generation_enabled'] == False
     
     def test_rm_027_player_receives_defaults_on_join(self, sample_room):
         """
