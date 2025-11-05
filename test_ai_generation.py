@@ -30,7 +30,7 @@ def test_ai_generation():
     # Import AI generator
     print(f"2. Importing AI generator module...")
     try:
-        from Model.ai_generator import get_ai_generator, AIGenerator
+        from ai_generator import get_ai_generator, AIGenerator
         print(f"   ✓ AI generator module imported successfully")
     except Exception as e:
         print(f"   ✗ Failed to import: {e}")

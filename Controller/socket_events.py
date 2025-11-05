@@ -104,16 +104,20 @@ def register_socket_events(socketio, game_manager):
                         logger.info(f"AI generator status - Enabled: {ai_gen.enabled}, Has client: {ai_gen.client is not None}")
                         
                         if ai_gen.enabled:
-                            # Get context from ALL truths (defaults + AI-generated + player lists)
-                            existing_truths = room.get_all_used_truths()
+                            # Get context from room defaults (since player's list is empty)
+                            existing_truths = room.default_truths.copy()
                             
-                            logger.info(f"Attempting to generate truth with {len(existing_truths)} existing truths as context (including {len(room.ai_generated_truths)} AI-generated)")
+                            # Also add truths from other players for more variety
+                            for other_player in room.players:
+                                if other_player.socket_id != selected_player.socket_id:
+                                    existing_truths.extend([t.text for t in other_player.truth_dare_list.truths])
+                            
+                            logger.info(f"Attempting to generate truth with {len(existing_truths)} existing truths as context")
                             generated_text = ai_gen.generate_truth(existing_truths)
                             
                             if generated_text:
-                                # Successfully generated! Track it and add to player's list
+                                # Successfully generated! Add it to the player's list and use it
                                 logger.info(f"Successfully generated truth for {selected_player.name}: '{generated_text[:50]}...'")
-                                room.add_ai_generated_truth(generated_text)  # Track to avoid duplicates
                                 new_truth = Truth(generated_text, is_default=False, submitted_by='AI')
                                 selected_player.truth_dare_list.truths.append(new_truth)
                                 room.game_state.set_current_truth_dare(new_truth.to_dict())
@@ -156,16 +160,20 @@ def register_socket_events(socketio, game_manager):
                         logger.info(f"AI generator status - Enabled: {ai_gen.enabled}, Has client: {ai_gen.client is not None}")
                         
                         if ai_gen.enabled:
-                            # Get context from ALL dares (defaults + AI-generated + player lists)
-                            existing_dares = room.get_all_used_dares()
+                            # Get context from room defaults (since player's list is empty)
+                            existing_dares = room.default_dares.copy()
                             
-                            logger.info(f"Attempting to generate dare with {len(existing_dares)} existing dares as context (including {len(room.ai_generated_dares)} AI-generated)")
+                            # Also add dares from other players for more variety
+                            for other_player in room.players:
+                                if other_player.socket_id != selected_player.socket_id:
+                                    existing_dares.extend([d.text for d in other_player.truth_dare_list.dares])
+                            
+                            logger.info(f"Attempting to generate dare with {len(existing_dares)} existing dares as context")
                             generated_text = ai_gen.generate_dare(existing_dares)
                             
                             if generated_text:
-                                # Successfully generated! Track it and add to player's list
+                                # Successfully generated! Add it to the player's list and use it
                                 logger.info(f"Successfully generated dare for {selected_player.name}: '{generated_text[:50]}...'")
-                                room.add_ai_generated_dare(generated_text)  # Track to avoid duplicates
                                 new_dare = Dare(generated_text, is_default=False, submitted_by='AI')
                                 selected_player.truth_dare_list.dares.append(new_dare)
                                 room.game_state.set_current_truth_dare(new_dare.to_dict())

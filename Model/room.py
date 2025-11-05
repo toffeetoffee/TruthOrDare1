@@ -18,10 +18,6 @@ class Room:
         self.default_dares = []
         self._load_default_lists()
         
-        # Track AI-generated content to avoid duplicates
-        self.ai_generated_truths = []  # List of all AI-generated truth texts
-        self.ai_generated_dares = []   # List of all AI-generated dare texts
-        
         # Game settings (configurable by host)
         self.settings = {
             'countdown_duration': 10,
@@ -114,34 +110,6 @@ class Room:
             if text in self.default_dares:
                 self.default_dares.remove(text)
     
-    def add_ai_generated_truth(self, text):
-        """Track an AI-generated truth to avoid duplicates"""
-        if text and text not in self.ai_generated_truths:
-            self.ai_generated_truths.append(text)
-    
-    def add_ai_generated_dare(self, text):
-        """Track an AI-generated dare to avoid duplicates"""
-        if text and text not in self.ai_generated_dares:
-            self.ai_generated_dares.append(text)
-    
-    def get_all_used_truths(self):
-        """Get all truths that have been used or generated (for AI context)"""
-        all_truths = self.default_truths.copy()
-        all_truths.extend(self.ai_generated_truths)
-        # Also include unused truths from all players
-        for player in self.players:
-            all_truths.extend([t.text for t in player.truth_dare_list.truths])
-        return all_truths
-    
-    def get_all_used_dares(self):
-        """Get all dares that have been used or generated (for AI context)"""
-        all_dares = self.default_dares.copy()
-        all_dares.extend(self.ai_generated_dares)
-        # Also include unused dares from all players
-        for player in self.players:
-            all_dares.extend([d.text for d in player.truth_dare_list.dares])
-        return all_dares
-    
     def update_settings(self, new_settings):
         """Update room settings"""
         for key, value in new_settings.items():
@@ -231,10 +199,6 @@ class Room:
         
         # Clear round history
         self.round_history = []
-        
-        # Clear AI generation history
-        self.ai_generated_truths = []
-        self.ai_generated_dares = []
         
         # Reset game state
         self.game_state.reset_for_new_game()
