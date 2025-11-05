@@ -90,29 +90,46 @@ def register_socket_events(socketio, game_manager):
                     room.game_state.set_current_truth_dare(selected_item.to_dict())
                 else:
                     # List is empty! Try AI generation if enabled
+                    import logging
+                    logger = logging.getLogger(__name__)
+                    
                     ai_enabled = room.settings.get('ai_generation_enabled', False)
+                    logger.info(f"Player {selected_player.name}'s truth list is empty. AI generation enabled: {ai_enabled}")
+                    
                     generated_text = None
                     
                     if ai_enabled:
                         # Get AI generator and try to generate a new truth
                         ai_gen = get_ai_generator()
+                        logger.info(f"AI generator status - Enabled: {ai_gen.enabled}, Has client: {ai_gen.client is not None}")
+                        
                         if ai_gen.enabled:
-                            # Get all existing truths as plain text for context
-                            existing_truths = [t.text for t in selected_player.truth_dare_list.truths]
-                            # Also include default truths for more context
-                            existing_truths.extend(room.default_truths)
+                            # Get context from room defaults (since player's list is empty)
+                            existing_truths = room.default_truths.copy()
                             
+                            # Also add truths from other players for more variety
+                            for other_player in room.players:
+                                if other_player.socket_id != selected_player.socket_id:
+                                    existing_truths.extend([t.text for t in other_player.truth_dare_list.truths])
+                            
+                            logger.info(f"Attempting to generate truth with {len(existing_truths)} existing truths as context")
                             generated_text = ai_gen.generate_truth(existing_truths)
                             
                             if generated_text:
                                 # Successfully generated! Add it to the player's list and use it
+                                logger.info(f"Successfully generated truth for {selected_player.name}: '{generated_text[:50]}...'")
                                 new_truth = Truth(generated_text, is_default=False, submitted_by='AI')
                                 selected_player.truth_dare_list.truths.append(new_truth)
                                 room.game_state.set_current_truth_dare(new_truth.to_dict())
                                 list_was_empty = False  # Successfully generated, so list wasn't really empty
+                            else:
+                                logger.error(f"AI generation returned None for truth - falling back to empty message")
+                        else:
+                            logger.warning(f"AI generator is not enabled - Initialization error: {ai_gen.initialization_error}")
                     
                     # If AI didn't generate (disabled or failed), use fallback message
                     if generated_text is None:
+                        logger.warning(f"Using fallback message for {selected_player.name} - no truths available")
                         list_was_empty = True
                         room.game_state.list_empty = True
                         room.game_state.set_current_truth_dare({
@@ -129,29 +146,46 @@ def register_socket_events(socketio, game_manager):
                     room.game_state.set_current_truth_dare(selected_item.to_dict())
                 else:
                     # List is empty! Try AI generation if enabled
+                    import logging
+                    logger = logging.getLogger(__name__)
+                    
                     ai_enabled = room.settings.get('ai_generation_enabled', False)
+                    logger.info(f"Player {selected_player.name}'s dare list is empty. AI generation enabled: {ai_enabled}")
+                    
                     generated_text = None
                     
                     if ai_enabled:
                         # Get AI generator and try to generate a new dare
                         ai_gen = get_ai_generator()
+                        logger.info(f"AI generator status - Enabled: {ai_gen.enabled}, Has client: {ai_gen.client is not None}")
+                        
                         if ai_gen.enabled:
-                            # Get all existing dares as plain text for context
-                            existing_dares = [d.text for d in selected_player.truth_dare_list.dares]
-                            # Also include default dares for more context
-                            existing_dares.extend(room.default_dares)
+                            # Get context from room defaults (since player's list is empty)
+                            existing_dares = room.default_dares.copy()
                             
+                            # Also add dares from other players for more variety
+                            for other_player in room.players:
+                                if other_player.socket_id != selected_player.socket_id:
+                                    existing_dares.extend([d.text for d in other_player.truth_dare_list.dares])
+                            
+                            logger.info(f"Attempting to generate dare with {len(existing_dares)} existing dares as context")
                             generated_text = ai_gen.generate_dare(existing_dares)
                             
                             if generated_text:
                                 # Successfully generated! Add it to the player's list and use it
+                                logger.info(f"Successfully generated dare for {selected_player.name}: '{generated_text[:50]}...'")
                                 new_dare = Dare(generated_text, is_default=False, submitted_by='AI')
                                 selected_player.truth_dare_list.dares.append(new_dare)
                                 room.game_state.set_current_truth_dare(new_dare.to_dict())
                                 list_was_empty = False  # Successfully generated, so list wasn't really empty
+                            else:
+                                logger.error(f"AI generation returned None for dare - falling back to empty message")
+                        else:
+                            logger.warning(f"AI generator is not enabled - Initialization error: {ai_gen.initialization_error}")
                     
                     # If AI didn't generate (disabled or failed), use fallback message
                     if generated_text is None:
+                        logger.warning(f"Using fallback message for {selected_player.name} - no dares available")
                         list_was_empty = True
                         room.game_state.list_empty = True
                         room.game_state.set_current_truth_dare({
@@ -878,6 +912,38 @@ def register_socket_events(socketio, game_manager):
                 'type': item_type,
                 'targets': successfully_added
             }, to=request.sid)
+    
+    @socketio.on('check_ai_status')
+    def on_check_ai_status(data):
+        """Check AI generator status and run a test (for debugging)"""
+        room_code = data.get('room')
+        
+        if not room_code:
+            return
+        
+        room = game_manager.get_room(room_code)
+        if not room:
+            return
+        
+        # Only host can check AI status
+        if not room.is_host(request.sid):
+            return
+        
+        # Get AI generator status
+        ai_gen = get_ai_generator()
+        status = ai_gen.get_status()
+        
+        # Run test if requested
+        test_result = None
+        if data.get('run_test', False):
+            test_result = ai_gen.test_generation()
+        
+        # Send status back to requester
+        emit('ai_status_result', {
+            'status': status,
+            'test_result': test_result,
+            'room_ai_enabled': room.settings.get('ai_generation_enabled', False)
+        }, to=request.sid)
     
     @socketio.on('disconnect')
     def on_disconnect():
