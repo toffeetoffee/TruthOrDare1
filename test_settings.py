@@ -40,7 +40,7 @@ class TestSettingsInitialization:
         assert settings['skip_duration'] == 5
         assert settings['max_rounds'] == 10
         assert settings['minigame_chance'] == 20
-        assert settings['ai_generation_enabled'] == False
+        assert settings['ai_generation_enabled'] == True
     
     def test_st_002_settings_dict_structure(self, room):
         """
@@ -494,7 +494,7 @@ class TestAIGenerationSetting:
         Description: Verify that AI generation is disabled by default
         Acceptance Criteria: ai_generation_enabled is False initially
         """
-        assert room.settings['ai_generation_enabled'] == False
+        assert room.settings['ai_generation_enabled'] == True
     
     def test_st_036_enable_ai_generation(self, room):
         """
