@@ -185,7 +185,7 @@ IMPORTANT: Output ONLY the question itself, nothing else. No explanations, no pr
         
         if existing_truths:
             prompt += "Existing truth questions (DO NOT duplicate these):\n"
-            for i, truth in enumerate(existing_truths[:100], 1):  # Limit to 100 to avoid token limits
+            for i, truth in enumerate(existing_truths[:30], 1):  # Limit to 30 to avoid token limits
                 prompt += f"{i}. {truth}\n"
             prompt += "\n"
         
@@ -212,7 +212,7 @@ IMPORTANT: Output ONLY the dare itself, nothing else. No explanations, no prefix
         
         if existing_dares:
             prompt += "Existing dares (DO NOT duplicate these):\n"
-            for i, dare in enumerate(existing_dares[:100], 1):  # Limit to 100 to avoid token limits
+            for i, dare in enumerate(existing_dares[:30], 1):  # Limit to 30 to avoid token limits
                 prompt += f"{i}. {dare}\n"
             prompt += "\n"
         

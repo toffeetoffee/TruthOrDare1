@@ -110,6 +110,7 @@ def register_socket_events(socketio, game_manager):
                             existing_truths = room.default_truths.copy()
                             
                             # CRITICAL: Add this player's used truths to prevent duplicates
+                            existing_truths.extend([t.text for t in selected_player.truth_dare_list.truths])
                             existing_truths.extend(selected_player.get_all_used_truths())
                             
                             # Also add truths from other players' current lists and used lists
@@ -128,7 +129,6 @@ def register_socket_events(socketio, game_manager):
                                 logger.info(f"Successfully generated truth for {selected_player.name}: '{generated_text[:50]}...'")
                                 new_truth = Truth(generated_text, is_default=False, submitted_by='AI')
                                 selected_player.truth_dare_list.truths.append(new_truth)
-                                selected_player.used_truths.append(new_truth)
                                 # Mark as used immediately since it will be performed
                                 selected_player.mark_truth_used(generated_text)
                                 room.game_state.set_current_truth_dare(new_truth.to_dict())
@@ -177,7 +177,9 @@ def register_socket_events(socketio, game_manager):
                             existing_dares = room.default_dares.copy()
                             
                             # CRITICAL: Add this player's used dares to prevent duplicates
-                            existing_dares.extend(selected_player.get_all_used_dares())
+                            existing_truths.extend([t.text for t in selected_player.truth_dare_list.dares])
+                            existing_truths.extend(selected_player.get_all_used_dares())
+                            
                             
                             # Also add dares from other players' current lists and used lists
                             for other_player in room.players:
@@ -195,7 +197,6 @@ def register_socket_events(socketio, game_manager):
                                 logger.info(f"Successfully generated dare for {selected_player.name}: '{generated_text[:50]}...'")
                                 new_dare = Dare(generated_text, is_default=False, submitted_by='AI')
                                 selected_player.truth_dare_list.dares.append(new_dare)
-                                selected_player.used_dares.append(new_dare)
                                 # Mark as used immediately since it will be performed
                                 selected_player.mark_dare_used(generated_text)
                                 room.game_state.set_current_truth_dare(new_dare.to_dict())
