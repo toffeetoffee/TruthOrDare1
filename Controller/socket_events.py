@@ -177,8 +177,8 @@ def register_socket_events(socketio, game_manager):
                             existing_dares = room.default_dares.copy()
                             
                             # CRITICAL: Add this player's used dares to prevent duplicates
-                            existing_truths.extend([t.text for t in selected_player.truth_dare_list.dares])
-                            existing_truths.extend(selected_player.get_all_used_dares())
+                            existing_dares.extend([t.text for t in selected_player.truth_dare_list.dares])
+                            existing_dares.extend(selected_player.get_all_used_dares())
                             
                             
                             # Also add dares from other players' current lists and used lists
