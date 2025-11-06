@@ -30,10 +30,17 @@ def test_ai_generation():
     # Import AI generator
     print(f"2. Importing AI generator module...")
     try:
-        from ai_generator import get_ai_generator, AIGenerator
-        print(f"   ✓ AI generator module imported successfully")
+        # Try importing from Model directory first (correct structure)
+        try:
+            from Model.ai_generator import get_ai_generator, AIGenerator
+            print(f"   ✓ AI generator module imported successfully (from Model/)")
+        except ImportError:
+            # Fall back to root directory
+            from Model.ai_generator import get_ai_generator, AIGenerator
+            print(f"   ✓ AI generator module imported successfully (from root)")
     except Exception as e:
         print(f"   ✗ Failed to import: {e}")
+        print(f"   Make sure ai_generator.py is in the current directory or Model/ directory")
         return False
     
     print()

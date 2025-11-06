@@ -87,6 +87,8 @@ def register_socket_events(socketio, game_manager):
                 if truths:
                     selected_item = random.choice(truths)
                     selected_player.truth_dare_list.truths.remove(selected_item)
+                    # Mark as used to prevent AI duplicates
+                    selected_player.mark_truth_used(selected_item.text)
                     room.game_state.set_current_truth_dare(selected_item.to_dict())
                 else:
                     # List is empty! Try AI generation if enabled
@@ -104,22 +106,30 @@ def register_socket_events(socketio, game_manager):
                         logger.info(f"AI generator status - Enabled: {ai_gen.enabled}, Has client: {ai_gen.client is not None}")
                         
                         if ai_gen.enabled:
-                            # Get context from room defaults (since player's list is empty)
+                            # Get context from room defaults
                             existing_truths = room.default_truths.copy()
                             
-                            # Also add truths from other players for more variety
+                            # CRITICAL: Add this player's used truths to prevent duplicates
+                            existing_truths.extend(selected_player.get_all_used_truths())
+                            
+                            # Also add truths from other players' current lists and used lists
                             for other_player in room.players:
                                 if other_player.socket_id != selected_player.socket_id:
+                                    # Add unused truths from their current list
                                     existing_truths.extend([t.text for t in other_player.truth_dare_list.truths])
+                                    # Add their used truths to prevent global duplicates
+                                    existing_truths.extend(other_player.get_all_used_truths())
                             
-                            logger.info(f"Attempting to generate truth with {len(existing_truths)} existing truths as context")
+                            logger.info(f"Attempting to generate truth with {len(existing_truths)} existing truths as context (including {len(selected_player.get_all_used_truths())} used by this player)")
                             generated_text = ai_gen.generate_truth(existing_truths)
                             
                             if generated_text:
-                                # Successfully generated! Add it to the player's list and use it
+                                # Successfully generated! Add to player's list and mark as used
                                 logger.info(f"Successfully generated truth for {selected_player.name}: '{generated_text[:50]}...'")
                                 new_truth = Truth(generated_text, is_default=False, submitted_by='AI')
                                 selected_player.truth_dare_list.truths.append(new_truth)
+                                # Mark as used immediately since it will be performed
+                                selected_player.mark_truth_used(generated_text)
                                 room.game_state.set_current_truth_dare(new_truth.to_dict())
                                 list_was_empty = False  # Successfully generated, so list wasn't really empty
                             else:
@@ -143,6 +153,8 @@ def register_socket_events(socketio, game_manager):
                 if dares:
                     selected_item = random.choice(dares)
                     selected_player.truth_dare_list.dares.remove(selected_item)
+                    # Mark as used to prevent AI duplicates
+                    selected_player.mark_dare_used(selected_item.text)
                     room.game_state.set_current_truth_dare(selected_item.to_dict())
                 else:
                     # List is empty! Try AI generation if enabled
@@ -160,22 +172,30 @@ def register_socket_events(socketio, game_manager):
                         logger.info(f"AI generator status - Enabled: {ai_gen.enabled}, Has client: {ai_gen.client is not None}")
                         
                         if ai_gen.enabled:
-                            # Get context from room defaults (since player's list is empty)
+                            # Get context from room defaults
                             existing_dares = room.default_dares.copy()
                             
-                            # Also add dares from other players for more variety
+                            # CRITICAL: Add this player's used dares to prevent duplicates
+                            existing_dares.extend(selected_player.get_all_used_dares())
+                            
+                            # Also add dares from other players' current lists and used lists
                             for other_player in room.players:
                                 if other_player.socket_id != selected_player.socket_id:
+                                    # Add unused dares from their current list
                                     existing_dares.extend([d.text for d in other_player.truth_dare_list.dares])
+                                    # Add their used dares to prevent global duplicates
+                                    existing_dares.extend(other_player.get_all_used_dares())
                             
-                            logger.info(f"Attempting to generate dare with {len(existing_dares)} existing dares as context")
+                            logger.info(f"Attempting to generate dare with {len(existing_dares)} existing dares as context (including {len(selected_player.get_all_used_dares())} used by this player)")
                             generated_text = ai_gen.generate_dare(existing_dares)
                             
                             if generated_text:
-                                # Successfully generated! Add it to the player's list and use it
+                                # Successfully generated! Add to player's list and mark as used
                                 logger.info(f"Successfully generated dare for {selected_player.name}: '{generated_text[:50]}...'")
                                 new_dare = Dare(generated_text, is_default=False, submitted_by='AI')
                                 selected_player.truth_dare_list.dares.append(new_dare)
+                                # Mark as used immediately since it will be performed
+                                selected_player.mark_dare_used(generated_text)
                                 room.game_state.set_current_truth_dare(new_dare.to_dict())
                                 list_was_empty = False  # Successfully generated, so list wasn't really empty
                             else:
