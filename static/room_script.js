@@ -337,7 +337,7 @@ function updateGameUI() {
       if (gameState.list_empty) {
         // List empty - skip auto-activated
         voteSkipButton.disabled = true;
-        voteSkipButton.textContent = 'âš ï¸ List Empty - Skip Auto-Activated!';
+        voteSkipButton.textContent = '⚠️ List Empty - Skip Auto-Activated!';
         voteSkipButton.style.background = '#ffc107';
         voteSkipButton.style.color = '#000';
       } else if (gameState.skip_activated) {
@@ -386,7 +386,7 @@ function displayTopPlayers() {
   topPlayersList.innerHTML = gameState.top_players
     .map((player, index) => {
       const rank = index + 1;
-      const medal = rank === 1 ? 'ðŸ¥‡' : rank === 2 ? 'ðŸ¥ˆ' : rank === 3 ? 'ðŸ¥‰' : '';
+      const medal = rank === 1 ? '🥇' : rank === 2 ? '🥈' : rank === 3 ? '🥉' : '';
       return `
         <div class="top-player">
           <span class="player-rank">${medal} #${rank}</span>
