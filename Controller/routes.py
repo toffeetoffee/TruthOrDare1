@@ -1,4 +1,3 @@
-# Controller/routes.py
 from flask import render_template, request, redirect, url_for, flash
 
 
@@ -12,35 +11,56 @@ def register_routes(app, game_manager):
 
     @app.route("/create", methods=["POST"])
     def create_room():
-        """Create a new room and redirect the host to it."""
+        """
+        Handle 'Create New Room' form.
+        Form fields (from index.html):
+          - name
+        """
         name = request.form.get("name", "").strip() or "Anonymous"
 
         # Create room in GameManager
-        room_code = game_manager.create_room()
+        code = game_manager.create_room()
 
         # Redirect to the room page with the player's name in query params
-        return redirect(url_for("room", code=room_code, name=name))
+        return redirect(url_for("room", code=code, name=name))
 
     @app.route("/join", methods=["POST"])
     def join_room_route():
-        """Join an existing room and redirect the player to it."""
+        """
+        Handle 'Join Room' form.
+        Form fields (from index.html):
+          - name
+          - code   <-- IMPORTANT: this matches <input name="code">
+        """
+        code = request.form.get("code", "").strip().upper()
         name = request.form.get("name", "").strip() or "Anonymous"
-        room_code = request.form.get("room", "").strip().upper()
 
-        if not room_code or not game_manager.room_exists(room_code):
+        if not code:
+            flash("Please enter a room code.")
+            return redirect(url_for("index"))
+
+        # Check that the room actually exists
+        if not game_manager.room_exists(code):
             flash("Room not found. Check the code and try again.")
             return redirect(url_for("index"))
 
-        return redirect(url_for("room", code=room_code, name=name))
+        # Redirect into the room
+        return redirect(url_for("room", code=code, name=name))
 
     @app.route("/room/<code>", methods=["GET"])
     def room(code):
-        """Room page where the actual game UI lives."""
+        """
+        Room page where the actual game UI lives.
+        URL: /room/<code>?name=<player name>
+        """
+        name = request.args.get("name", "").strip() or "Anonymous"
+
+        code = code.strip().upper()
+
+        # If the room somehow doesn't exist (e.g. destroyed), go home
         if not game_manager.room_exists(code):
             flash("Room does not exist or has already ended.")
             return redirect(url_for("index"))
 
-        # Get player name from query parameters
-        name = request.args.get("name", "Anonymous")
-        # Pass 'room_code' so template and JS have the correct variable
+        # Pass 'room_code' so room.html + JS can use it
         return render_template("room.html", room_code=code, name=name)
