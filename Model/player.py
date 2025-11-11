@@ -1,67 +1,95 @@
+# Model/player.py
+import re
 from Model.truth_dare_list import TruthDareList
 from Model.scoring_system import ScoringSystem
 
+
+def _normalize_text(text: str) -> str:
+    """Normalize text for consistent duplicate checking."""
+    return re.sub(r'[^a-z0-9]+', '', text.strip().lower())
+
+
 class Player:
     """Represents a player in the game"""
-    
+
     def __init__(self, socket_id, name):
         self.socket_id = socket_id
         self.name = name
         self.truth_dare_list = TruthDareList()
         self.score = 0
         self.submissions_this_round = 0
-        
+
         # Track used truths/dares to prevent AI from generating duplicates
-        self.used_truths = []  # List of truth texts that have been performed
-        self.used_dares = []   # List of dare texts that have been performed
-    
+        self.used_truths = []  # List of performed truth texts
+        self.used_dares = []   # List of performed dare texts
+
+        # Normalized lookup sets for fast duplicate prevention
+        self._used_truths_normalized = set()
+        self._used_dares_normalized = set()
+
+    # ------------------------------------------------------------------
+    # Score and submission management
+    # ------------------------------------------------------------------
     def add_score(self, points):
-        """Add points to player's score"""
         self.score += points
-    
+
     def reset_round_submissions(self):
-        """Reset submission counter for new round"""
         self.submissions_this_round = 0
-    
+
     def increment_submissions(self):
-        """Increment submission counter"""
         self.submissions_this_round += 1
-    
+
     def can_submit_more(self):
-        """Check if player can submit more truths/dares this round"""
-        
         return self.submissions_this_round < ScoringSystem.MAX_SUBMISSIONS_PER_ROUND
-    
+
+    # ------------------------------------------------------------------
+    # Truth/Dare tracking for AI duplicate prevention
+    # ------------------------------------------------------------------
     def mark_truth_used(self, truth_text):
-        """Mark a truth as used (performed) to prevent AI duplicates"""
-        if truth_text and truth_text not in self.used_truths:
+        """Mark a truth as used and record normalized version."""
+        if not truth_text:
+            return
+        norm = _normalize_text(truth_text)
+        if norm not in self._used_truths_normalized:
             self.used_truths.append(truth_text)
-    
+            self._used_truths_normalized.add(norm)
+
     def mark_dare_used(self, dare_text):
-        """Mark a dare as used (performed) to prevent AI duplicates"""
-        if dare_text and dare_text not in self.used_dares:
+        """Mark a dare as used and record normalized version."""
+        if not dare_text:
+            return
+        norm = _normalize_text(dare_text)
+        if norm not in self._used_dares_normalized:
             self.used_dares.append(dare_text)
-    
+            self._used_dares_normalized.add(norm)
+
+    def has_used_truth(self, text):
+        return _normalize_text(text) in self._used_truths_normalized
+
+    def has_used_dare(self, text):
+        return _normalize_text(text) in self._used_dares_normalized
+
     def get_all_used_truths(self):
-        """Get all truths this player has used (for AI context)"""
+        """Return list of all truths this player has used."""
         return self.used_truths.copy()
-    
+
     def get_all_used_dares(self):
-        """Get all dares this player has used (for AI context)"""
+        """Return list of all dares this player has used."""
         return self.used_dares.copy()
-    
+
+    # ------------------------------------------------------------------
+    # Serialization
+    # ------------------------------------------------------------------
     def to_dict(self):
-        """Convert player to dictionary format"""
         return {
-            'sid': self.socket_id,
-            'name': self.name,
-            'score': self.score
+            "sid": self.socket_id,
+            "name": self.name,
+            "score": self.score,
         }
-    
+
     @staticmethod
     def from_dict(data):
-        """Create player from dictionary"""
-        player = Player(data['sid'], data['name'])
-        if 'score' in data:
-            player.score = data['score']
+        player = Player(data["sid"], data["name"])
+        if "score" in data:
+            player.score = data["score"]
         return player

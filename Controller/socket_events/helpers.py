@@ -1,13 +1,14 @@
 # Controller/socket_events/helpers.py
 """
-Holds shared helper functions and global references for the socket event system.
-All Socket.IO event modules import helpers to access the same socketio and game_manager.
+Shared helpers for Socket.IO events.
+Handles game flow utilities and duplicate prevention logic for AI generation.
 """
 
 import threading
 import time
 import random
 import logging
+import re
 
 from Model.scoring_system import ScoringSystem
 from Model.round_record import RoundRecord
@@ -17,7 +18,7 @@ from Model.truth_dare import Truth, Dare
 
 logger = logging.getLogger(__name__)
 
-# These are initialized by init_socket_helpers() when app starts
+# These are initialized at runtime by init_socket_helpers()
 _socketio = None
 _game_manager = None
 
@@ -26,22 +27,23 @@ _game_manager = None
 # Initialization
 # ----------------------------------------------------------------------
 def init_socket_helpers(socketio, game_manager):
-    """
-    Must be called from register_socket_events() in __init__.py
-    to share the same SocketIO and GameManager instances.
-    """
+    """Inject shared instances from app.py"""
     global _socketio, _game_manager
     _socketio = socketio
     _game_manager = game_manager
-
     print(f"[HELPERS_INIT] SocketIO bound. Shared GameManager id={id(game_manager)}")
 
 
 # ----------------------------------------------------------------------
-# Shared helper functions
+# Utilities
 # ----------------------------------------------------------------------
+def _normalize_text(text: str) -> str:
+    """Normalize text for case/punctuation insensitive duplicate detection."""
+    return re.sub(r"[^a-z0-9]+", "", text.strip().lower())
+
+
 def _broadcast_room_state(room_code, room):
-    """Broadcasts the player list and host ID to everyone in the room."""
+    """Broadcast current room player list + host to all clients."""
     if not room:
         return
 
@@ -56,30 +58,26 @@ def _broadcast_room_state(room_code, room):
 
 
 # ----------------------------------------------------------------------
-# Game phase helpers (unchanged logic)
+# Game flow helpers
 # ----------------------------------------------------------------------
 def start_selection_or_minigame(room_code):
-    """Helper to decide between minigame or normal selection."""
+    """Decide between starting a minigame or a normal selection phase."""
     room = _game_manager.get_room(room_code)
     if not room or len(room.players) < 2:
         return
 
-    minigame_chance = room.settings.get("minigame_chance", 20) / 100.0
-    trigger_minigame = random.random() < minigame_chance
+    chance = room.settings.get("minigame_chance", 20) / 100.0
+    trigger_minigame = random.random() < chance
 
-    if trigger_minigame and len(room.players) >= 2:
-        # Start minigame (staring contest)
+    if trigger_minigame:
+        # Staring contest minigame
         minigame = StaringContest()
         participants = random.sample(room.players, 2)
-        for participant in participants:
-            minigame.add_participant(participant)
+        for p in participants:
+            minigame.add_participant(p)
+            ScoringSystem.award_minigame_participate_points(p)
 
-        total_voters = len(room.players) - 2
-        minigame.set_total_voters(total_voters)
-
-        for participant in participants:
-            ScoringSystem.award_minigame_participate_points(participant)
-
+        minigame.set_total_voters(len(room.players) - 2)
         room.game_state.set_minigame(minigame)
         room.game_state.start_minigame()
 
@@ -88,25 +86,23 @@ def start_selection_or_minigame(room_code):
         )
     else:
         # Normal selection
-        selected_player = random.choice(room.players)
-        room.game_state.set_selected_player(selected_player.name)
-        selection_duration = room.settings["selection_duration"]
-        room.game_state.start_selection(duration=selection_duration)
+        selected = random.choice(room.players)
+        room.game_state.set_selected_player(selected.name)
+        dur = room.settings["selection_duration"]
+        room.game_state.start_selection(duration=dur)
 
         _socketio.emit(
             "game_state_update", room.game_state.to_dict(), room=room_code, namespace="/"
         )
 
-        def start_td_phase():
-            time.sleep(selection_duration)
-            start_truth_dare_phase_handler(room_code)
-
-        thread = threading.Thread(target=start_td_phase, daemon=True)
-        thread.start()
+        threading.Thread(
+            target=lambda: (time.sleep(dur), start_truth_dare_phase_handler(room_code)),
+            daemon=True,
+        ).start()
 
 
 def start_truth_dare_phase_handler(room_code):
-    """Handles beginning of the Truth/Dare phase."""
+    """Begin the truth/dare phase for the selected player."""
     room = _game_manager.get_room(room_code)
     if not room:
         return
@@ -114,35 +110,32 @@ def start_truth_dare_phase_handler(room_code):
     if room.game_state.selected_choice is None:
         room.game_state.set_selected_choice(random.choice(["truth", "dare"]))
 
-    selected_player = room.get_player_by_name(room.game_state.selected_player)
+    player = room.get_player_by_name(room.game_state.selected_player)
     list_was_empty = False
 
-    if selected_player:
+    if player:
         choice = room.game_state.selected_choice
         if choice == "truth":
-            truths = selected_player.truth_dare_list.truths
+            truths = player.truth_dare_list.truths
             if truths:
                 item = random.choice(truths)
-                selected_player.truth_dare_list.truths.remove(item)
-                selected_player.mark_truth_used(item.text)
+                player.truth_dare_list.truths.remove(item)
+                player.mark_truth_used(item.text)
                 room.game_state.set_current_truth_dare(item.to_dict())
             else:
-                list_was_empty = not _try_generate_ai_item(
-                    room, selected_player, "truth"
-                )
+                list_was_empty = not _try_generate_ai_item(room, player, "truth")
         else:
-            dares = selected_player.truth_dare_list.dares
+            dares = player.truth_dare_list.dares
             if dares:
                 item = random.choice(dares)
-                selected_player.truth_dare_list.dares.remove(item)
-                selected_player.mark_dare_used(item.text)
+                player.truth_dare_list.dares.remove(item)
+                player.mark_dare_used(item.text)
                 room.game_state.set_current_truth_dare(item.to_dict())
             else:
-                list_was_empty = not _try_generate_ai_item(room, selected_player, "dare")
+                list_was_empty = not _try_generate_ai_item(room, player, "dare")
 
-    # Start truth/dare phase timer
-    td_duration = room.settings["truth_dare_duration"]
-    room.game_state.start_truth_dare(duration=td_duration)
+    td_dur = room.settings["truth_dare_duration"]
+    room.game_state.start_truth_dare(duration=td_dur)
 
     if list_was_empty:
         room.game_state.list_empty = True
@@ -153,25 +146,17 @@ def start_truth_dare_phase_handler(room_code):
         "game_state_update", room.game_state.to_dict(), room=room_code, namespace="/"
     )
 
-    def end_td_phase():
-        while True:
-            time.sleep(0.5)
-            r = _game_manager.get_room(room_code)
-            if not r:
-                break
-            if r.game_state.is_phase_complete():
-                _handle_end_of_truth_dare(r, room_code)
-                break
-
-    thread = threading.Thread(target=end_td_phase, daemon=True)
-    thread.start()
+    threading.Thread(target=lambda: _monitor_truth_dare(room_code), daemon=True).start()
 
 
 # ----------------------------------------------------------------------
-# Internal helpers (AI generation + round end)
+# AI Generation with full duplicate prevention
 # ----------------------------------------------------------------------
 def _try_generate_ai_item(room, player, item_type):
-    """Attempt AI generation for empty list. Returns True if successful."""
+    """
+    Generate a new truth/dare using AI while ensuring no duplicates.
+    Returns True if successful.
+    """
     ai_enabled = room.settings.get("ai_generation_enabled", False)
     if not ai_enabled:
         return False
@@ -180,55 +165,91 @@ def _try_generate_ai_item(room, player, item_type):
     if not ai_gen.enabled:
         return False
 
-    existing = room.default_truths.copy() if item_type == "truth" else room.default_dares.copy()
-    if item_type == "truth":
-        existing.extend([t.text for t in player.truth_dare_list.truths])
-        existing.extend(player.get_all_used_truths())
-    else:
-        existing.extend([d.text for d in player.truth_dare_list.dares])
-        existing.extend(player.get_all_used_dares())
+    normalize = _normalize_text
+    existing_norm = set()
 
-    for other in room.players:
-        if other.socket_id != player.socket_id:
-            if item_type == "truth":
-                existing.extend([t.text for t in other.truth_dare_list.truths])
-                existing.extend(other.get_all_used_truths())
-            else:
-                existing.extend([d.text for d in other.truth_dare_list.dares])
-                existing.extend(other.get_all_used_dares())
-
-    generated_text = (
-        ai_gen.generate_truth(existing)
-        if item_type == "truth"
-        else ai_gen.generate_dare(existing)
+    # Combine all existing texts for duplicate prevention
+    base_items = (
+        room.default_truths if item_type == "truth" else room.default_dares
     )
-    if not generated_text:
-        room.game_state.list_empty = True
-        room.game_state.set_current_truth_dare(
-            {
-                "text": f"{player.name} has no more {item_type}s available!",
-                "type": item_type,
-                "is_default": False,
-                "submitted_by": None,
-            }
+    existing_norm.update(map(normalize, base_items))
+
+    # Add previously AI-generated items
+    ai_items = (
+        room.ai_generated_truths if item_type == "truth" else room.ai_generated_dares
+    )
+    existing_norm.update(map(normalize, ai_items))
+
+    # Add player-specific and other players' used/unused
+    for p in room.players:
+        existing_norm.update(map(normalize, p.get_all_used_truths()))
+        existing_norm.update(map(normalize, p.get_all_used_dares()))
+        if item_type == "truth":
+            existing_norm.update(map(normalize, [t.text for t in p.truth_dare_list.truths]))
+        else:
+            existing_norm.update(map(normalize, [d.text for d in p.truth_dare_list.dares]))
+
+    # Try multiple attempts to get a unique generation
+    for attempt in range(3):
+        generated = (
+            ai_gen.generate_truth(list(existing_norm))
+            if item_type == "truth"
+            else ai_gen.generate_dare(list(existing_norm))
         )
-        return False
+        if not generated:
+            continue
 
-    if item_type == "truth":
-        new_item = Truth(generated_text, is_default=False, submitted_by="AI")
-        player.truth_dare_list.truths.append(new_item)
-        player.mark_truth_used(generated_text)
-    else:
-        new_item = Dare(generated_text, is_default=False, submitted_by="AI")
-        player.truth_dare_list.dares.append(new_item)
-        player.mark_dare_used(generated_text)
+        norm = normalize(generated)
+        if norm in existing_norm:
+            logger.warning(f"Duplicate {item_type} detected from AI: {generated}")
+            continue
 
-    room.game_state.set_current_truth_dare(new_item.to_dict())
-    return True
+        # Accept as unique
+        if item_type == "truth":
+            new_item = Truth(generated, is_default=False, submitted_by="AI")
+            player.truth_dare_list.truths.append(new_item)
+            player.mark_truth_used(generated)
+            room.ai_generated_truths.append(generated)
+        else:
+            new_item = Dare(generated, is_default=False, submitted_by="AI")
+            player.truth_dare_list.dares.append(new_item)
+            player.mark_dare_used(generated)
+            room.ai_generated_dares.append(generated)
+
+        room.game_state.set_current_truth_dare(new_item.to_dict())
+        return True
+
+    # Fallback message if generation failed or duplicated too many times
+    logger.warning(f"AI generation failed to produce unique {item_type}")
+    room.game_state.list_empty = True
+    room.game_state.set_current_truth_dare(
+        {
+            "text": f"{player.name} has no more {item_type}s available!",
+            "type": item_type,
+            "is_default": False,
+            "submitted_by": None,
+        }
+    )
+    return False
+
+
+# ----------------------------------------------------------------------
+# End of phase / round management
+# ----------------------------------------------------------------------
+def _monitor_truth_dare(room_code):
+    """Monitors active truth/dare phase and ends when timer expires."""
+    while True:
+        time.sleep(0.5)
+        room = _game_manager.get_room(room_code)
+        if not room:
+            break
+        if room.game_state.is_phase_complete():
+            _handle_end_of_truth_dare(room, room_code)
+            break
 
 
 def _handle_end_of_truth_dare(room, room_code):
-    """Handles scoring, round record, and moving to next round."""
+    """Score awards, record keeping, and next-round scheduling."""
     performer = room.get_player_by_name(room.game_state.selected_player)
     if performer:
         ScoringSystem.award_perform_points(performer)
@@ -240,7 +261,7 @@ def _handle_end_of_truth_dare(room, room_code):
             if submitter:
                 ScoringSystem.award_submission_performed_points(submitter)
 
-        round_record = RoundRecord(
+        record = RoundRecord(
             round_number=room.game_state.current_round,
             selected_player_name=room.game_state.selected_player,
             truth_dare_text=room.game_state.current_truth_dare["text"],
@@ -249,7 +270,7 @@ def _handle_end_of_truth_dare(room, room_code):
             ),
             submitted_by=room.game_state.current_truth_dare.get("submitted_by"),
         )
-        room.add_round_record(round_record)
+        room.add_round_record(record)
 
     if room.game_state.should_end_game():
         room.game_state.start_end_game()
@@ -261,15 +282,14 @@ def _handle_end_of_truth_dare(room, room_code):
         }
         _socketio.emit("game_state_update", end_data, room=room_code, namespace="/")
     else:
-        prep_duration = room.settings["preparation_duration"]
-        room.game_state.start_preparation(duration=prep_duration)
+        prep_dur = room.settings["preparation_duration"]
+        room.game_state.start_preparation(duration=prep_dur)
         room.reset_player_round_submissions()
         _socketio.emit(
             "game_state_update", room.game_state.to_dict(), room=room_code, namespace="/"
         )
 
-        def next_round():
-            time.sleep(prep_duration)
-            start_selection_or_minigame(room_code)
-
-        threading.Thread(target=next_round, daemon=True).start()
+        threading.Thread(
+            target=lambda: (time.sleep(prep_dur), start_selection_or_minigame(room_code)),
+            daemon=True,
+        ).start()
