@@ -1,3 +1,4 @@
+# app.py
 from flask import Flask
 from flask_socketio import SocketIO
 
@@ -12,16 +13,15 @@ app.config['SECRET_KEY'] = 'prts-is-watching-you'
 # Initialize SocketIO
 socketio = SocketIO(app, cors_allowed_origins='*')
 
-# Initialize Game Manager (Model)
+# Initialize Game Manager
 game_manager = GameManager()
 
-# Register routes (Controller)
+# Register HTTP routes (Controller)
 register_routes(app, game_manager)
 
-# Register socket events (Controller)
+# Register SocketIO events (Controller)
 register_socket_events(socketio, game_manager)
 
-
-if __name__ == '__main__':
-    # For local dev; on Render/production you’ll use gunicorn/eventlet
-    socketio.run(app, host='0.0.0.0', port=5000)
+# Run server
+if __name__ == "__main__":
+    socketio.run(app, host="0.0.0.0", port=5000)
