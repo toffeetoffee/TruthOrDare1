@@ -1,50 +1,65 @@
+# Controller/socket_events/lobby_events.py
+
 from flask_socketio import join_room, leave_room, emit
 from flask import request
 
+from .helpers import _broadcast_room_state
+
 
 def register_lobby_events(socketio, game_manager):
-    """Socket events related to lobby and player connections."""
+    """Register lobby / room lifecycle events."""
 
     @socketio.on("join")
-    def handle_join(data):
-        name = data.get("name", "Anonymous")
+    def on_join(data):
         room_code = data.get("room")
+        name = data.get("name", "Anonymous")
 
-        room = game_manager.get_room(room_code)
-        if not room:
-            emit("error", {"message": "Room not found."})
+        if not room_code:
             return
 
-        player = room.add_player(request.sid, name)
         join_room(room_code)
 
-        # Send updated player list to everyone in the room
-        emit("player_list", room.get_player_list(), to=room_code)
-        emit("joined_room", {"name": name, "room": room_code})
+        # Add player to room
+        room = game_manager.add_player_to_room(room_code, request.sid, name)
+
+        # Broadcast updated state
+        _broadcast_room_state(room_code, room)
 
     @socketio.on("leave")
-    def handle_leave(data):
+    def on_leave(data):
         room_code = data.get("room")
+
+        if not room_code:
+            return
+
+        # Remove player
+        room = game_manager.remove_player_from_room(room_code, request.sid)
+        leave_room(room_code)
+
+        # Broadcast updated state if room still exists
+        if room:
+            _broadcast_room_state(room_code, room)
+
+        # Notify the leaving player
+        emit("left_room", {}, to=request.sid)
+
+    @socketio.on("destroy_room")
+    def on_destroy_room(data):
+        room_code = data.get("room")
+
+        if not room_code:
+            return
+
         room = game_manager.get_room(room_code)
         if not room:
             return
 
-        player = room.get_player_by_sid(request.sid)
-        if player:
-            room.remove_player(player)
-            leave_room(room_code)
-            emit("player_list", room.get_player_list(), to=room_code)
-            emit("left_room", {"name": player.name}, to=room_code)
+        # Only host can destroy
+        if not room.is_host(request.sid):
+            return
 
-        if room.is_empty():
-            game_manager.remove_room(room_code)
+        # Notify all players
+        emit("room_destroyed", {}, room=room_code)
 
-    @socketio.on("disconnect")
-    def handle_disconnect():
-        for room in game_manager.rooms.values():
-            player = room.get_player_by_sid(request.sid)
-            if player:
-                room.remove_player(player)
-                emit("player_list", room.get_player_list(), to=room.code)
-                if room.is_empty():
-                    game_manager.remove_room(room.code)
+        # Delete room
+        game_manager.delete_room(room_code)

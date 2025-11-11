@@ -1,44 +1,41 @@
 <!doctype html>
 <html>
-<head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Room {{ code }}</title>
-  <link rel="stylesheet" href="{{ url_for('static', filename='room_styles.css') }}">
-</head>
-<body>
-  <h1>Dare or Dare</h1>
-  
-  <div class="room-info">
-    <div>Room Code</div>
-    <div class="room-code">{{ code }}</div>
-    <div style="margin-top: 12px; color: #666;">Share this code with your friends!</div>
-  </div>
-
-  <!-- Lobby Section -->
-  <div id="lobby-section" class="lobby-section">
-    <div class="players-section">
-      <h2>Players in Room</h2>
-      <ul id="player-list" class="player-list">
-        <li class="player-item">Waiting for players...</li>
-      </ul>
-      <div id="player-count" class="player-count"></div>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>Room {{ room_code }}</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='room_styles.css') }}">
+  </head>
+  <body>
+    <h1>Dare or Dare</h1>
+    <div class="room-info">
+      <div>Room Code</div>
+      <div class="room-code">{{ room_code }}</div>
+      <div style="margin-top: 12px; color: #666;">Share this code with your friends!</div>
     </div>
 
-    <div class="button-group">
-      <button class="btn-leave" onclick="leaveRoom()">Leave Room</button>
-    </div>
-
-    <div id="host-controls" class="host-controls">
-      <div class="button-group">
-        <button class="btn-settings" onclick="openSettings()">Settings</button>
-        <button id="start-button" class="btn-start" onclick="startGame()">Start Game</button>
+    <!-- Lobby Section -->
+    <div id="lobby-section" class="lobby-section">
+      <div class="players-section">
+        <h2>Players in Room</h2>
+        <ul id="player-list" class="player-list">
+          <li class="player-item">Waiting for players...</li>
+        </ul>
+        <div id="player-count" class="player-count"></div>
       </div>
       <div class="button-group">
-        <button class="btn-destroy" onclick="destroyRoom()">Destroy Room</button>
+        <button class="btn-leave" onclick="leaveRoom()">Leave Room</button>
+      </div>
+      <div id="host-controls" class="host-controls">
+        <div class="button-group">
+          <button class="btn-settings" onclick="openSettings()">Settings</button>
+          <button id="start-button" class="btn-start" onclick="startGame()">Start Game</button>
+        </div>
+        <div class="button-group">
+          <button class="btn-destroy" onclick="destroyRoom()">Destroy Room</button>
+        </div>
       </div>
     </div>
-  </div>
 
   <!-- Settings Modal -->
   <div id="settings-modal" class="modal">
@@ -348,12 +345,12 @@
     </div>
   </div>
 
-  <script src="https://cdn.socket.io/4.6.1/socket.io.min.js" crossorigin="anonymous"></script>
-  <script>
-    // Pass template variables to JavaScript
-    const ROOM_CODE = '{{ code }}';
-    const PLAYER_NAME = '{{ name }}';
-  </script>
-  <script src="{{ url_for('static', filename='room_script.js') }}"></script>
-</body>
+    <script src="https://cdn.socket.io/4.6.1/socket.io.min.js" crossorigin="anonymous"></script>
+    <script>
+      // Pass template variables to JavaScript
+      const ROOM_CODE = '{{ room_code }}';
+      const PLAYER_NAME = '{{ name }}';
+    </script>
+    <script src="{{ url_for('static', filename='room_script.js') }}"></script>
+  </body>
 </html>

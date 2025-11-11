@@ -1,3 +1,4 @@
+# Controller/routes.py
 from flask import render_template, request, redirect, url_for, flash
 
 
@@ -35,11 +36,11 @@ def register_routes(app, game_manager):
     @app.route("/room/<code>", methods=["GET"])
     def room(code):
         """Room page where the actual game UI lives."""
-        # We don't strictly need to check existence here; the socket layer also validates,
-        # but this gives nicer behavior if someone hits /room/<code> directly.
         if not game_manager.room_exists(code):
             flash("Room does not exist or has already ended.")
             return redirect(url_for("index"))
 
+        # Get player name from query parameters
         name = request.args.get("name", "Anonymous")
+        # Pass 'room_code' so template and JS have the correct variable
         return render_template("room.html", room_code=code, name=name)
