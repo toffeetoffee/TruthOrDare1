@@ -60,8 +60,13 @@ def start_selection_or_minigame(room_code):
         return
 
     if random.random() < room.settings.get("minigame_chance", 20) / 100.0:
+        # Re-seed RNG with time and room code to diversify results
+        random.seed(time.time() + hash(room_code) + random.randint(0, 9999))
+        
+        # Choose a random minigame
         minigame_class = random.choice([StaringContest, ArmWrestlingContest])
         minigame = minigame_class()
+
         participants = random.sample(room.players, 2)
         for p in participants:
             minigame.add_participant(p)
