@@ -18,8 +18,13 @@ def register_lobby_events(socketio, game_manager):
         player = room.add_player(request.sid, name)
         join_room(room_code)
 
-        # Send updated player list to everyone in the room
-        emit("player_list", room.get_player_list(), to=room_code)
+        # Create the payload structure JS expects
+        payload = {
+            "players": [p.name for p in room.players],
+            "host_sid": room.host_sid,
+        }
+
+        emit("player_list", payload, to=room_code)
         emit("joined_room", {"name": name, "room": room_code})
 
     @socketio.on("leave")
@@ -33,7 +38,12 @@ def register_lobby_events(socketio, game_manager):
         if player:
             room.remove_player(player)
             leave_room(room_code)
-            emit("player_list", room.get_player_list(), to=room_code)
+
+            payload = {
+                "players": [p.name for p in room.players],
+                "host_sid": room.host_sid,
+            }
+            emit("player_list", payload, to=room_code)
             emit("left_room", {"name": player.name}, to=room_code)
 
         if room.is_empty():
@@ -41,10 +51,16 @@ def register_lobby_events(socketio, game_manager):
 
     @socketio.on("disconnect")
     def handle_disconnect():
-        for room in game_manager.rooms.values():
+        for room in list(game_manager.rooms.values()):
             player = room.get_player_by_sid(request.sid)
             if player:
                 room.remove_player(player)
-                emit("player_list", room.get_player_list(), to=room.code)
+
+                payload = {
+                    "players": [p.name for p in room.players],
+                    "host_sid": room.host_sid,
+                }
+                emit("player_list", payload, to=room.code)
+
                 if room.is_empty():
                     game_manager.remove_room(room.code)
