@@ -154,8 +154,8 @@ def start_truth_dare_phase_handler(room_code):
 # ----------------------------------------------------------------------
 def _try_generate_ai_item(room, player, item_type):
     """
-    Generate a new truth/dare using AI while ensuring no duplicates.
-    Returns True if successful.
+    Generate a new truth/dare using AI while ensuring no duplicates (strict global check).
+    Returns True if a unique item was successfully created.
     """
     ai_enabled = room.settings.get("ai_generation_enabled", False)
     if not ai_enabled:
@@ -166,21 +166,14 @@ def _try_generate_ai_item(room, player, item_type):
         return False
 
     normalize = _normalize_text
-    existing_norm = set()
 
-    # Combine all existing texts for duplicate prevention
-    base_items = (
-        room.default_truths if item_type == "truth" else room.default_dares
-    )
-    existing_norm.update(map(normalize, base_items))
+    # ---------------- Build global normalized context ----------------
+    existing_norm = set(map(normalize, room.default_truths if item_type == "truth" else room.default_dares))
+    # Add all AI-generated items (past rounds)
+    ai_list = room.ai_generated_truths if item_type == "truth" else room.ai_generated_dares
+    existing_norm.update(map(normalize, ai_list))
 
-    # Include all previously AI-generated texts for this room
-    ai_items = (
-        room.ai_generated_truths if item_type == "truth" else room.ai_generated_dares
-    )
-    existing_norm.update(map(normalize, ai_items))
-
-    # Add player-specific and all other players’ used + unused texts
+    # Include everything from every player
     for p in room.players:
         if item_type == "truth":
             existing_norm.update(map(normalize, p.get_all_used_truths()))
@@ -189,8 +182,14 @@ def _try_generate_ai_item(room, player, item_type):
             existing_norm.update(map(normalize, p.get_all_used_dares()))
             existing_norm.update(map(normalize, [d.text for d in p.truth_dare_list.dares]))
 
-    # Try multiple attempts to get a unique generation
-    for attempt in range(3):
+    # Include normalized caches if defined
+    if hasattr(room, "_ai_generated_truths_normalized") and item_type == "truth":
+        existing_norm.update(room._ai_generated_truths_normalized)
+    if hasattr(room, "_ai_generated_dares_normalized") and item_type == "dare":
+        existing_norm.update(room._ai_generated_dares_normalized)
+    # ------------------------------------------------------------------
+
+    for attempt in range(5):
         generated = (
             ai_gen.generate_truth(list(existing_norm))
             if item_type == "truth"
@@ -200,27 +199,33 @@ def _try_generate_ai_item(room, player, item_type):
             continue
 
         norm = normalize(generated)
-        if norm in existing_norm:
-            logger.warning(f"[AI DUPLICATE] {item_type} '{generated}' already exists, retrying...")
-            continue
 
-        # Accept as unique
+        if norm in existing_norm:
+            logger.warning(f"[AI DUPLICATE] Duplicate {item_type} detected: {generated}")
+            continue  # regenerate
+
+        # Accept unique generation
         if item_type == "truth":
             new_item = Truth(generated, is_default=False, submitted_by="AI")
             player.truth_dare_list.truths.append(new_item)
             player.mark_truth_used(generated)
             room.ai_generated_truths.append(generated)
+            if hasattr(room, "_ai_generated_truths_normalized"):
+                room._ai_generated_truths_normalized.add(norm)
         else:
             new_item = Dare(generated, is_default=False, submitted_by="AI")
             player.truth_dare_list.dares.append(new_item)
             player.mark_dare_used(generated)
             room.ai_generated_dares.append(generated)
+            if hasattr(room, "_ai_generated_dares_normalized"):
+                room._ai_generated_dares_normalized.add(norm)
 
         room.game_state.set_current_truth_dare(new_item.to_dict())
+        logger.info(f"[AI SUCCESS] Unique {item_type}: {generated}")
         return True
 
-    # Fallback if all retries failed
-    logger.warning(f"[AI FAILURE] No unique {item_type} after retries")
+    # All retries failed → fallback
+    logger.warning(f"[AI FAILURE] No unique {item_type} after retries.")
     room.game_state.list_empty = True
     room.game_state.set_current_truth_dare({
         "text": f"{player.name} has no more {item_type}s available!",
