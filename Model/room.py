@@ -5,6 +5,7 @@ import re
 from Model.player import Player
 from Model.game_state import GameState
 
+
 # ----------------------------------------------------------------------
 # Normalization helper
 # ----------------------------------------------------------------------
@@ -216,7 +217,7 @@ class Room:
             )
         self.round_history = []
         self.game_state.reset_for_new_game()
-        # Note: AI lists intentionally persist to avoid duplicates
+        # Note: AI lists persist to prevent duplicates
 
     def reset_player_round_submissions(self):
         for p in self.players:

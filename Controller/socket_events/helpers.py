@@ -1,7 +1,6 @@
 # Controller/socket_events/helpers.py
 """
-Shared helpers for Socket.IO events.
-Enhanced duplicate-prevention and AI pacing.
+Enhanced duplicate prevention and AI pacing with global queue lock.
 """
 
 import threading
@@ -19,6 +18,9 @@ from Model.truth_dare import Truth, Dare
 logger = logging.getLogger(__name__)
 _socketio = None
 _game_manager = None
+
+# Global lock to serialize AI requests (prevents cached identical responses)
+_ai_generation_lock = threading.Lock()
 
 
 # ----------------------------------------------------------------------
@@ -122,7 +124,7 @@ def start_truth_dare_phase_handler(room_code):
 
 
 # ----------------------------------------------------------------------
-# AI generation with pacing & strict duplicate control
+# AI generation with global lock + random seed
 # ----------------------------------------------------------------------
 def _try_generate_ai_item(room, player, item_type):
     ai_enabled = room.settings.get("ai_generation_enabled", False)
@@ -157,14 +159,21 @@ def _try_generate_ai_item(room, player, item_type):
             existing_norm.update(map(normalize, [d.text for d in p.truth_dare_list.dares]))
 
     for attempt in range(5):
-        # Small random delay to prevent rapid duplicate responses
+        # Slight pacing delay before calling AI
         time.sleep(random.uniform(0.5, 1.5))
 
-        generated = (
-            ai_gen.generate_truth(list(existing_norm))
-            if item_type == "truth"
-            else ai_gen.generate_dare(list(existing_norm))
-        )
+        # Add random seed tag to prompt to avoid cache collisions
+        unique_tag = random.randint(1000, 9999)
+        try:
+            with _ai_generation_lock:
+                if item_type == "truth":
+                    generated = ai_gen.generate_truth(list(existing_norm) + [f"SEED:{unique_tag}"])
+                else:
+                    generated = ai_gen.generate_dare(list(existing_norm) + [f"SEED:{unique_tag}"])
+        except Exception as e:
+            logger.error(f"[AI ERROR] {e}")
+            continue
+
         if not generated:
             continue
 
