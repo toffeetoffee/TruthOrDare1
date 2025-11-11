@@ -1,6 +1,7 @@
 # Controller/socket_events/helpers.py
 """
 Enhanced duplicate prevention and AI pacing with global queue lock.
+Includes proper removal of used truths/dares by text match.
 """
 
 import threading
@@ -97,7 +98,7 @@ def start_truth_dare_phase_handler(room_code):
             items = player.truth_dare_list.truths
             if items:
                 item = random.choice(items)
-                player.truth_dare_list.truths.remove(item)
+                player.truth_dare_list.remove_truth_by_text(item.text)
                 player.mark_truth_used(item.text)
                 room.game_state.set_current_truth_dare(item.to_dict())
             else:
@@ -106,7 +107,7 @@ def start_truth_dare_phase_handler(room_code):
             items = player.truth_dare_list.dares
             if items:
                 item = random.choice(items)
-                player.truth_dare_list.dares.remove(item)
+                player.truth_dare_list.remove_dare_by_text(item.text)
                 player.mark_dare_used(item.text)
                 room.game_state.set_current_truth_dare(item.to_dict())
             else:
@@ -186,13 +187,15 @@ def _try_generate_ai_item(room, player, item_type):
             if not room.add_ai_generated_truth(generated):
                 continue
             new_item = Truth(generated, False, "AI")
-            player.truth_dare_list.truths.append(new_item)
+            player.truth_dare_list.add_truth(generated, submitted_by="AI")
+            player.truth_dare_list.remove_truth_by_text(generated)
             player.mark_truth_used(generated)
         else:
             if not room.add_ai_generated_dare(generated):
                 continue
             new_item = Dare(generated, False, "AI")
-            player.truth_dare_list.dares.append(new_item)
+            player.truth_dare_list.add_dare(generated, submitted_by="AI")
+            player.truth_dare_list.remove_dare_by_text(generated)
             player.mark_dare_used(generated)
 
         room.game_state.set_current_truth_dare(new_item.to_dict())
