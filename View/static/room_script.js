@@ -181,60 +181,80 @@ function updateGameUI() {
     displayRoundHistory();
     
   } else if (gameState.phase === 'minigame') {
-    lobbySection.classList.add('hide');
-    gameArea.classList.add('show');
-    document.getElementById('minigame-section').style.display = 'block';
-    
-    // Update minigame UI
-    if (gameState.minigame) {
-      const participants = gameState.minigame.participants;
-      
-      // Display participant names
-      document.getElementById('participant-1').textContent = participants[0] || 'Player 1';
-      document.getElementById('participant-2').textContent = participants[1] || 'Player 2';
-      
-      // Display vote counts for each participant
-      const voteCounts = gameState.minigame.vote_counts || {};
-      const votes1 = voteCounts[participants[0]] || 0;
-      const votes2 = voteCounts[participants[1]] || 0;
-      document.getElementById('participant-1-votes').textContent = `${votes1} vote${votes1 !== 1 ? 's' : ''}`;
-      document.getElementById('participant-2-votes').textContent = `${votes2} vote${votes2 !== 1 ? 's' : ''}`;
-      
-      // Check if current player is a participant
-      const isParticipant = participants.includes(PLAYER_NAME);
-      
-      if (isParticipant) {
-        // Show participant message
-        document.getElementById('minigame-voting').style.display = 'none';
-        document.getElementById('minigame-participant-message').style.display = 'block';
-      } else {
-        // Show voting buttons
-        document.getElementById('minigame-voting').style.display = 'block';
-        document.getElementById('minigame-participant-message').style.display = 'none';
-        
-        // Re-enable buttons (reset from previous rounds)
-        const btn1 = document.getElementById('vote-btn-1');
-        const btn2 = document.getElementById('vote-btn-2');
-        btn1.disabled = false;
-        btn2.disabled = false;
-        
-        // Update button onclick handlers
-        document.getElementById('vote-name-1').textContent = participants[0] || 'Player 1';
-        document.getElementById('vote-name-2').textContent = participants[1] || 'Player 2';
-        
-        btn1.onclick = () => voteMinigame(participants[0]);
-        btn2.onclick = () => voteMinigame(participants[1]);
-        
-        // Update vote count (show how many voted out of total)
-        const totalVoters = gameState.minigame.total_voters || 0;
-        const currentVotes = gameState.minigame.vote_count || 0;
-        
-        document.getElementById('minigame-vote-count').textContent = currentVotes;
-        document.getElementById('minigame-required-votes').textContent = totalVoters;
-      }
+  lobbySection.classList.add('hide');
+  gameArea.classList.add('show');
+  const minigameSection = document.getElementById('minigame-section');
+  minigameSection.style.display = 'block';
+
+  if (gameState.minigame) {
+    const minigameType = gameState.minigame.type || "staring_contest";
+    const participants = gameState.minigame.participants || [];
+
+    // --- Dynamic title and description ---
+    const titleElem = document.querySelector(".minigame-title");
+    const descElem = document.querySelector(".minigame-description");
+    const instructionElem = document.querySelector(".voting-instruction");
+
+    if (minigameType === "arm_wrestling") {
+      titleElem.textContent = "💪 Arm Wrestling Contest 💪";
+      descElem.textContent = "Vote for who lost the arm wrestling match!";
+      instructionElem.textContent = "Vote for the loser of the arm wrestling match:";
+    } else {
+      titleElem.textContent = "🎮 Staring Contest 🎮";
+      descElem.textContent = "Who will blink first?";
+      instructionElem.textContent = "Vote for who blinked first!";
     }
-    
-  } else if (gameState.phase === 'countdown') {
+
+    // --- Display participants ---
+    document.getElementById("participant-1").textContent = participants[0] || "Player 1";
+    document.getElementById("participant-2").textContent = participants[1] || "Player 2";
+
+    const voteCounts = gameState.minigame.vote_counts || {};
+    const votes1 = voteCounts[participants[0]] || 0;
+    const votes2 = voteCounts[participants[1]] || 0;
+    document.getElementById("participant-1-votes").textContent = `${votes1} vote${votes1 !== 1 ? "s" : ""}`;
+    document.getElementById("participant-2-votes").textContent = `${votes2} vote${votes2 !== 1 ? "s" : ""}`;
+
+    const isParticipant = participants.includes(PLAYER_NAME);
+
+    if (isParticipant) {
+      // Participant: hide voting UI
+      document.getElementById("minigame-voting").style.display = "none";
+      document.getElementById("minigame-participant-message").style.display = "block";
+
+      // Change participant message for each minigame
+      const msgElem = document.querySelector("#minigame-participant-message p:first-child");
+      if (minigameType === "arm_wrestling") {
+        msgElem.textContent = "You are arm wrestling! Show your strength!";
+      } else {
+        msgElem.textContent = "You are competing! Don't blink!";
+      }
+
+    } else {
+      // Non-participant: show voting buttons
+      document.getElementById("minigame-voting").style.display = "block";
+      document.getElementById("minigame-participant-message").style.display = "none";
+
+      const btn1 = document.getElementById("vote-btn-1");
+      const btn2 = document.getElementById("vote-btn-2");
+      btn1.disabled = false;
+      btn2.disabled = false;
+
+      document.getElementById("vote-name-1").textContent = participants[0] || "Player 1";
+      document.getElementById("vote-name-2").textContent = participants[1] || "Player 2";
+
+      btn1.onclick = () => voteMinigame(participants[0]);
+      btn2.onclick = () => voteMinigame(participants[1]);
+
+      const totalVoters = gameState.minigame.total_voters || 0;
+      const currentVotes = gameState.minigame.vote_count || 0;
+
+      document.getElementById("minigame-vote-count").textContent = currentVotes;
+      document.getElementById("minigame-required-votes").textContent = totalVoters;
+    }
+  }
+}
+ else if (gameState.phase === 'countdown') {
     lobbySection.classList.add('hide');
     gameArea.classList.add('show');
     document.getElementById('countdown-section').style.display = 'block';

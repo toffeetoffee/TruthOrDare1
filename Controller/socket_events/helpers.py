@@ -12,7 +12,7 @@ import re
 
 from Model.scoring_system import ScoringSystem
 from Model.round_record import RoundRecord
-from Model.minigame import StaringContest
+from Model.minigame import StaringContest, ArmWrestlingContest
 from Model.ai_generator import get_ai_generator
 from Model.truth_dare import Truth, Dare
 
@@ -60,7 +60,8 @@ def start_selection_or_minigame(room_code):
         return
 
     if random.random() < room.settings.get("minigame_chance", 20) / 100.0:
-        minigame = StaringContest()
+        minigame_class = random.choice([StaringContest, ArmWrestlingContest])
+        minigame = minigame_class()
         participants = random.sample(room.players, 2)
         for p in participants:
             minigame.add_participant(p)
