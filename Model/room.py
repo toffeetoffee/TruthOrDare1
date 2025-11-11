@@ -1,251 +1,232 @@
+# Model/room.py
 import json
 import os
+import re
 from Model.player import Player
 from Model.game_state import GameState
 
+# ----------------------------------------------------------------------
+# Normalization helper
+# ----------------------------------------------------------------------
+def _normalize_text(text: str) -> str:
+    """Normalize text for strict duplicate comparison."""
+    return re.sub(r"[^a-z0-9]+", "", text.strip().lower())
+
+
+# ----------------------------------------------------------------------
+# Room class
+# ----------------------------------------------------------------------
 class Room:
     """Represents a game room"""
-    
+
     def __init__(self, code):
         self.code = code
         self.host_sid = None
         self.players = []
         self.game_state = GameState()
-        self.round_history = []  # List of RoundRecord objects
-        
-        # Load default truths and dares for this room
+        self.round_history = []
+
+        # Default truths/dares for this room
         self.default_truths = []
         self.default_dares = []
         self._load_default_lists()
-        
-        # Track AI-generated content to avoid duplicates
-        self.ai_generated_truths = []  # List of all AI-generated truth texts
-        self.ai_generated_dares = []   # List of all AI-generated dare texts
-        
-        # Game settings (configurable by host)
+
+        # AI-generated tracking
+        self.ai_generated_truths = []
+        self.ai_generated_dares = []
+        self._ai_generated_truths_normalized = set()
+        self._ai_generated_dares_normalized = set()
+
+        # Configurable game settings
         self.settings = {
-            'countdown_duration': 10,
-            'preparation_duration': 30,
-            'selection_duration': 10,
-            'truth_dare_duration': 60,
-            'skip_duration': 5,
-            'max_rounds': 10,
-            'minigame_chance': 20,  # Percentage (0-100)
-            'ai_generation_enabled': True  # AI-powered truth/dare generation
+            "countdown_duration": 10,
+            "preparation_duration": 30,
+            "selection_duration": 10,
+            "truth_dare_duration": 60,
+            "skip_duration": 5,
+            "max_rounds": 10,
+            "minigame_chance": 20,
+            "ai_generation_enabled": True,
         }
-    
+
+    # ------------------------------------------------------------------
+    # Load defaults
+    # ------------------------------------------------------------------
     def _load_default_lists(self):
-        """Load default truths and dares from file"""
         try:
             current_dir = os.path.dirname(os.path.abspath(__file__))
             parent_dir = os.path.dirname(current_dir)
-            file_path = os.path.join(parent_dir, 'default_truths_dares.json')
-            
-            with open(file_path, 'r') as f:
+            file_path = os.path.join(parent_dir, "default_truths_dares.json")
+            with open(file_path, "r") as f:
                 data = json.load(f)
-            
-            self.default_truths = data.get('truths', [])
-            self.default_dares = data.get('dares', [])
+            self.default_truths = data.get("truths", [])
+            self.default_dares = data.get("dares", [])
         except Exception as e:
             print(f"Warning: Could not load default truths/dares: {e}")
-            # Use hardcoded defaults as fallback
             self.default_truths = [
                 "What is your biggest fear?",
-                "What is the most embarrassing thing you've ever done?"
+                "What is the most embarrassing thing you've ever done?",
             ]
-            self.default_dares = [
-                "Do 10 pushups",
-                "Sing a song loudly"
-            ]
-    
+            self.default_dares = ["Do 10 pushups", "Sing a song loudly"]
+
+    # ------------------------------------------------------------------
+    # Default list operations
+    # ------------------------------------------------------------------
     def get_default_truths(self):
-        """Get list of default truths"""
         return self.default_truths.copy()
-    
+
     def get_default_dares(self):
-        """Get list of default dares"""
         return self.default_dares.copy()
-    
+
     def add_default_truth(self, text):
-        """Add a new default truth"""
         if text and text not in self.default_truths:
             self.default_truths.append(text)
             return True
         return False
-    
+
     def add_default_dare(self, text):
-        """Add a new default dare"""
         if text and text not in self.default_dares:
             self.default_dares.append(text)
             return True
         return False
-    
+
     def edit_default_truth(self, old_text, new_text):
-        """Edit an existing default truth"""
         try:
-            index = self.default_truths.index(old_text)
+            idx = self.default_truths.index(old_text)
             if new_text and new_text not in self.default_truths:
-                self.default_truths[index] = new_text
+                self.default_truths[idx] = new_text
                 return True
         except ValueError:
             pass
         return False
-    
+
     def edit_default_dare(self, old_text, new_text):
-        """Edit an existing default dare"""
         try:
-            index = self.default_dares.index(old_text)
+            idx = self.default_dares.index(old_text)
             if new_text and new_text not in self.default_dares:
-                self.default_dares[index] = new_text
+                self.default_dares[idx] = new_text
                 return True
         except ValueError:
             pass
         return False
-    
+
     def remove_default_truths(self, texts_to_remove):
-        """Remove multiple default truths"""
-        for text in texts_to_remove:
-            if text in self.default_truths:
-                self.default_truths.remove(text)
-    
+        for t in texts_to_remove:
+            if t in self.default_truths:
+                self.default_truths.remove(t)
+
     def remove_default_dares(self, texts_to_remove):
-        """Remove multiple default dares"""
-        for text in texts_to_remove:
-            if text in self.default_dares:
-                self.default_dares.remove(text)
-    
+        for t in texts_to_remove:
+            if t in self.default_dares:
+                self.default_dares.remove(t)
+
+    # ------------------------------------------------------------------
+    # AI duplicate tracking helpers
+    # ------------------------------------------------------------------
     def add_ai_generated_truth(self, text):
-        """Track an AI-generated truth to avoid duplicates"""
-        if text and text not in self.ai_generated_truths:
+        norm = _normalize_text(text)
+        if norm not in self._ai_generated_truths_normalized:
+            self._ai_generated_truths_normalized.add(norm)
             self.ai_generated_truths.append(text)
-    
+            return True
+        return False
+
     def add_ai_generated_dare(self, text):
-        """Track an AI-generated dare to avoid duplicates"""
-        if text and text not in self.ai_generated_dares:
+        norm = _normalize_text(text)
+        if norm not in self._ai_generated_dares_normalized:
+            self._ai_generated_dares_normalized.add(norm)
             self.ai_generated_dares.append(text)
-    
+            return True
+        return False
+
     def get_all_used_truths(self):
-        """Get all truths that have been used or generated (for AI context)"""
         all_truths = self.default_truths.copy()
         all_truths.extend(self.ai_generated_truths)
-        # Also include unused truths from all players
-        for player in self.players:
-            all_truths.extend([t.text for t in player.truth_dare_list.truths])
+        for p in self.players:
+            all_truths.extend([t.text for t in p.truth_dare_list.truths])
         return all_truths
-    
+
     def get_all_used_dares(self):
-        """Get all dares that have been used or generated (for AI context)"""
         all_dares = self.default_dares.copy()
         all_dares.extend(self.ai_generated_dares)
-        # Also include unused dares from all players
-        for player in self.players:
-            all_dares.extend([d.text for d in player.truth_dare_list.dares])
+        for p in self.players:
+            all_dares.extend([d.text for d in p.truth_dare_list.dares])
         return all_dares
-    
+
+    # ------------------------------------------------------------------
+    # Settings, players, and scoring
+    # ------------------------------------------------------------------
     def update_settings(self, new_settings):
-        """Update room settings"""
-        for key, value in new_settings.items():
-            if key in self.settings:
-                self.settings[key] = int(value)
-        
-        # Update game state max_rounds if changed
-        if 'max_rounds' in new_settings:
-            self.game_state.max_rounds = int(new_settings['max_rounds'])
-    
+        for k, v in new_settings.items():
+            if k in self.settings:
+                self.settings[k] = int(v)
+        if "max_rounds" in new_settings:
+            self.game_state.max_rounds = int(new_settings["max_rounds"])
+
     def add_player(self, player):
-        """Add a player to the room"""
-        # Check if player already exists
         if not any(p.socket_id == player.socket_id for p in self.players):
-            # Initialize player's truth/dare list with room's defaults
             player.truth_dare_list.set_custom_defaults(
-                self.default_truths.copy(),
-                self.default_dares.copy()
+                self.default_truths.copy(), self.default_dares.copy()
             )
             self.players.append(player)
-        
-        # Set host if this is the first player
         if self.host_sid is None:
             self.host_sid = player.socket_id
-    
+
     def remove_player(self, socket_id):
-        """Remove a player by socket ID"""
         self.players = [p for p in self.players if p.socket_id != socket_id]
-        
-        # Transfer host if needed
         if self.host_sid == socket_id:
-            if len(self.players) > 0:
-                self.host_sid = self.players[0].socket_id
-            else:
-                self.host_sid = None
-    
+            self.host_sid = self.players[0].socket_id if self.players else None
+
     def get_player_names(self):
-        """Get list of player names"""
         return [p.name for p in self.players]
-    
+
     def get_player_by_sid(self, socket_id):
-        """Get player by socket ID"""
-        for player in self.players:
-            if player.socket_id == socket_id:
-                return player
-        return None
-    
+        return next((p for p in self.players if p.socket_id == socket_id), None)
+
     def get_player_by_name(self, name):
-        """Get player by name"""
-        for player in self.players:
-            if player.name == name:
-                return player
-        return None
-    
+        return next((p for p in self.players if p.name == name), None)
+
     def is_empty(self):
-        """Check if room has no players"""
-        return len(self.players) == 0
-    
+        return not self.players
+
     def is_host(self, socket_id):
-        """Check if socket ID is the host"""
         return self.host_sid == socket_id
-    
-    def add_round_record(self, round_record):
-        """Add a round record to history"""
-        self.round_history.append(round_record)
-    
+
+    # ------------------------------------------------------------------
+    # Round and game resets
+    # ------------------------------------------------------------------
+    def add_round_record(self, record):
+        self.round_history.append(record)
+
     def get_round_history(self):
-        """Get all round records as dictionaries"""
-        return [record.to_dict() for record in self.round_history]
-    
+        return [r.to_dict() for r in self.round_history]
+
     def get_top_players(self, n=5):
-        """Get top N players by score"""
         sorted_players = sorted(self.players, key=lambda p: p.score, reverse=True)
-        return [{'name': p.name, 'score': p.score} for p in sorted_players[:n]]
-    
+        return [{"name": p.name, "score": p.score} for p in sorted_players[:n]]
+
     def reset_for_new_game(self):
-        """Reset room for a new game"""
-        # Reset all player scores, submissions, and used truths/dares
-        for player in self.players:
-            player.score = 0
-            player.submissions_this_round = 0
-            # Clear used truths/dares history
-            player.used_truths = []
-            player.used_dares = []
-            # Reinitialize truth/dare lists with current defaults
-            player.truth_dare_list.set_custom_defaults(
-                self.default_truths.copy(),
-                self.default_dares.copy()
+        for p in self.players:
+            p.score = 0
+            p.submissions_this_round = 0
+            p.used_truths = []
+            p.used_dares = []
+            p.truth_dare_list.set_custom_defaults(
+                self.default_truths.copy(), self.default_dares.copy()
             )
-        
-        # Clear round history
         self.round_history = []
-        
-        # Reset game state
         self.game_state.reset_for_new_game()
-    
+        # Note: AI lists intentionally persist to avoid duplicates
+
     def reset_player_round_submissions(self):
-        """Reset submission counters for all players at start of new round"""
-        for player in self.players:
-            player.reset_round_submissions()
-    
+        for p in self.players:
+            p.reset_round_submissions()
+
+    # ------------------------------------------------------------------
+    # Serialization
+    # ------------------------------------------------------------------
     def to_dict(self):
-        """Convert room to dictionary format (for backward compatibility)"""
         return {
-            'host_sid': self.host_sid,
-            'players': [p.to_dict() for p in self.players]
+            "host_sid": self.host_sid,
+            "players": [p.to_dict() for p in self.players],
         }
