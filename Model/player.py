@@ -24,6 +24,10 @@ class Player:
         self.used_dares = []
         self._used_truths_normalized = set()
         self._used_dares_normalized = set()
+        
+        # Track AI generation counts for cheating prevention
+        self.ai_generated_truth_count = 0
+        self.ai_generated_dare_count = 0
 
     # ------------------------------------------------------------------
     # Score and submission management

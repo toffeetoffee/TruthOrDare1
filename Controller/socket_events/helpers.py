@@ -125,6 +125,10 @@ def start_truth_dare_phase_handler(room_code):
 # AI generation with pacing & strict duplicate control
 # ----------------------------------------------------------------------
 def _try_generate_ai_item(room, player, item_type):
+    """
+    Generate a new truth/dare using AI while ensuring uniqueness
+    and breaking Gemini's repetition pattern by discarding every even result.
+    """
     ai_enabled = room.settings.get("ai_generation_enabled", False)
     if not ai_enabled:
         return False
@@ -134,19 +138,15 @@ def _try_generate_ai_item(room, player, item_type):
         return False
 
     normalize = _normalize_text
-    base_items = (
-        room.default_truths if item_type == "truth" else room.default_dares
-    )
 
+    # Build context
+    base_items = room.default_truths if item_type == "truth" else room.default_dares
     existing_norm = set(map(normalize, base_items))
+
     ai_items = (
         room.ai_generated_truths if item_type == "truth" else room.ai_generated_dares
     )
     existing_norm.update(map(normalize, ai_items))
-    if hasattr(room, "_ai_generated_truths_normalized") and item_type == "truth":
-        existing_norm.update(room._ai_generated_truths_normalized)
-    if hasattr(room, "_ai_generated_dares_normalized") and item_type == "dare":
-        existing_norm.update(room._ai_generated_dares_normalized)
 
     for p in room.players:
         if item_type == "truth":
@@ -156,49 +156,71 @@ def _try_generate_ai_item(room, player, item_type):
             existing_norm.update(map(normalize, p.get_all_used_dares()))
             existing_norm.update(map(normalize, [d.text for d in p.truth_dare_list.dares]))
 
-    for attempt in range(5):
-        # Small random delay to prevent rapid duplicate responses
-        time.sleep(random.uniform(0.5, 1.5))
+    # Select the right counter
+    if item_type == "truth":
+        player.ai_generated_truth_count += 1
+        generation_number = player.ai_generated_truth_count
+    else:
+        player.ai_generated_dare_count += 1
+        generation_number = player.ai_generated_dare_count
 
-        generated = (
+    # ----------------- AI GENERATION -----------------
+    # Random delay helps avoid API echo
+    time.sleep(random.uniform(0.5, 1.0))
+    first_gen = (
+        ai_gen.generate_truth(list(existing_norm))
+        if item_type == "truth"
+        else ai_gen.generate_dare(list(existing_norm))
+    )
+
+    # CHEAT FIX: discard on every even-numbered generation
+    if generation_number % 2 == 0:
+        logger.info(f"[AI CHEAT] Discarding first {item_type} (#{generation_number}) to avoid repetition.")
+        time.sleep(random.uniform(0.5, 1.0))
+        second_gen = (
             ai_gen.generate_truth(list(existing_norm))
             if item_type == "truth"
             else ai_gen.generate_dare(list(existing_norm))
         )
-        if not generated:
-            continue
+        generated = second_gen or first_gen
+    else:
+        generated = first_gen
+    # ------------------------------------------------
 
-        norm = normalize(generated)
-        if norm in existing_norm:
-            logger.warning(f"[AI DUPLICATE] {item_type} already exists: {generated}")
-            continue
+    if not generated:
+        logger.warning(f"[AI FAILURE] No {item_type} generated after cheat attempt.")
+        room.game_state.list_empty = True
+        room.game_state.set_current_truth_dare({
+            "text": f"{player.name} has no more {item_type}s available!",
+            "type": item_type,
+            "is_default": False,
+            "submitted_by": None,
+        })
+        return False
 
-        if item_type == "truth":
-            if not room.add_ai_generated_truth(generated):
-                continue
-            new_item = Truth(generated, False, "AI")
-            player.truth_dare_list.truths.append(new_item)
-            player.mark_truth_used(generated)
-        else:
-            if not room.add_ai_generated_dare(generated):
-                continue
-            new_item = Dare(generated, False, "AI")
-            player.truth_dare_list.dares.append(new_item)
-            player.mark_dare_used(generated)
+    # Normalize and check duplicates just in case
+    norm = normalize(generated)
+    all_norm = set(map(normalize, room.ai_generated_truths if item_type == "truth" else room.ai_generated_dares))
+    if norm in all_norm:
+        logger.warning(f"[AI DUPLICATE AFTER CHEAT] {item_type}: {generated}")
+        return False
 
-        room.game_state.set_current_truth_dare(new_item.to_dict())
-        logger.info(f"[AI SUCCESS] Unique {item_type}: {generated}")
-        return True
+    # Store and apply
+    if item_type == "truth":
+        room.add_ai_generated_truth(generated)
+        new_item = Truth(generated, is_default=False, submitted_by="AI")
+        player.truth_dare_list.truths.append(new_item)
+        player.mark_truth_used(generated)
+    else:
+        room.add_ai_generated_dare(generated)
+        new_item = Dare(generated, is_default=False, submitted_by="AI")
+        player.truth_dare_list.dares.append(new_item)
+        player.mark_dare_used(generated)
 
-    logger.warning(f"[AI FAILURE] No unique {item_type} after retries.")
-    room.game_state.list_empty = True
-    room.game_state.set_current_truth_dare({
-        "text": f"{player.name} has no more {item_type}s available!",
-        "type": item_type,
-        "is_default": False,
-        "submitted_by": None,
-    })
-    return False
+    room.game_state.set_current_truth_dare(new_item.to_dict())
+    logger.info(f"[AI SUCCESS] {item_type.capitalize()} generated (#{generation_number}): {generated}")
+    return True
+
 
 
 # ----------------------------------------------------------------------
