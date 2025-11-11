@@ -10,7 +10,7 @@ def _normalize_text(text: str) -> str:
 
 
 class Player:
-    """Represents a player in the game"""
+    """Represents a player in the game."""
 
     def __init__(self, socket_id, name):
         self.socket_id = socket_id
@@ -20,10 +20,8 @@ class Player:
         self.submissions_this_round = 0
 
         # Track used truths/dares to prevent AI from generating duplicates
-        self.used_truths = []  # List of performed truth texts
-        self.used_dares = []   # List of performed dare texts
-
-        # Normalized lookup sets for fast duplicate prevention
+        self.used_truths = []
+        self.used_dares = []
         self._used_truths_normalized = set()
         self._used_dares_normalized = set()
 
@@ -46,7 +44,6 @@ class Player:
     # Truth/Dare tracking for AI duplicate prevention
     # ------------------------------------------------------------------
     def mark_truth_used(self, truth_text):
-        """Mark a truth as used and record normalized version."""
         if not truth_text:
             return
         norm = _normalize_text(truth_text)
@@ -55,7 +52,6 @@ class Player:
             self._used_truths_normalized.add(norm)
 
     def mark_dare_used(self, dare_text):
-        """Mark a dare as used and record normalized version."""
         if not dare_text:
             return
         norm = _normalize_text(dare_text)
@@ -70,11 +66,9 @@ class Player:
         return _normalize_text(text) in self._used_dares_normalized
 
     def get_all_used_truths(self):
-        """Return list of all truths this player has used."""
         return self.used_truths.copy()
 
     def get_all_used_dares(self):
-        """Return list of all dares this player has used."""
         return self.used_dares.copy()
 
     # ------------------------------------------------------------------

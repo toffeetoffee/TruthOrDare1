@@ -18,7 +18,7 @@ from Model.truth_dare import Truth, Dare
 
 logger = logging.getLogger(__name__)
 
-# These are initialized at runtime by init_socket_helpers()
+# Global variables are set once at app startup
 _socketio = None
 _game_manager = None
 
@@ -35,7 +35,7 @@ def init_socket_helpers(socketio, game_manager):
 
 
 # ----------------------------------------------------------------------
-# Utilities
+# Utility helpers
 # ----------------------------------------------------------------------
 def _normalize_text(text: str) -> str:
     """Normalize text for case/punctuation insensitive duplicate detection."""
@@ -150,7 +150,7 @@ def start_truth_dare_phase_handler(room_code):
 
 
 # ----------------------------------------------------------------------
-# AI Generation with full duplicate prevention
+# AI Generation with strict duplicate prevention
 # ----------------------------------------------------------------------
 def _try_generate_ai_item(room, player, item_type):
     """
@@ -174,19 +174,19 @@ def _try_generate_ai_item(room, player, item_type):
     )
     existing_norm.update(map(normalize, base_items))
 
-    # Add previously AI-generated items
+    # Include all previously AI-generated texts for this room
     ai_items = (
         room.ai_generated_truths if item_type == "truth" else room.ai_generated_dares
     )
     existing_norm.update(map(normalize, ai_items))
 
-    # Add player-specific and other players' used/unused
+    # Add player-specific and all other players’ used + unused texts
     for p in room.players:
-        existing_norm.update(map(normalize, p.get_all_used_truths()))
-        existing_norm.update(map(normalize, p.get_all_used_dares()))
         if item_type == "truth":
+            existing_norm.update(map(normalize, p.get_all_used_truths()))
             existing_norm.update(map(normalize, [t.text for t in p.truth_dare_list.truths]))
         else:
+            existing_norm.update(map(normalize, p.get_all_used_dares()))
             existing_norm.update(map(normalize, [d.text for d in p.truth_dare_list.dares]))
 
     # Try multiple attempts to get a unique generation
@@ -201,7 +201,7 @@ def _try_generate_ai_item(room, player, item_type):
 
         norm = normalize(generated)
         if norm in existing_norm:
-            logger.warning(f"Duplicate {item_type} detected from AI: {generated}")
+            logger.warning(f"[AI DUPLICATE] {item_type} '{generated}' already exists, retrying...")
             continue
 
         # Accept as unique
@@ -219,17 +219,15 @@ def _try_generate_ai_item(room, player, item_type):
         room.game_state.set_current_truth_dare(new_item.to_dict())
         return True
 
-    # Fallback message if generation failed or duplicated too many times
-    logger.warning(f"AI generation failed to produce unique {item_type}")
+    # Fallback if all retries failed
+    logger.warning(f"[AI FAILURE] No unique {item_type} after retries")
     room.game_state.list_empty = True
-    room.game_state.set_current_truth_dare(
-        {
-            "text": f"{player.name} has no more {item_type}s available!",
-            "type": item_type,
-            "is_default": False,
-            "submitted_by": None,
-        }
-    )
+    room.game_state.set_current_truth_dare({
+        "text": f"{player.name} has no more {item_type}s available!",
+        "type": item_type,
+        "is_default": False,
+        "submitted_by": None,
+    })
     return False
 
 
