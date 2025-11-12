@@ -47,17 +47,29 @@ export default function App() {
 
   const isHost = useMemo(()=> socket.id && hostSid && socket.id === hostSid, [hostSid])
 
-  const createOrJoin = (isCreate) => {
-    if (!name.trim()) return alert('Enter your name')
-    if (!isCreate && !roomCode.trim()) return alert('Enter room code')
-    if (isCreate) {
-      fetch('/create', {method:'POST', headers:{'Content-Type':'application/x-www-form-urlencoded'}, body: new URLSearchParams({name})})
-        .then(res => { window.location.reload() })
-    } else {
-      fetch('/join', {method:'POST', headers:{'Content-Type':'application/x-www-form-urlencoded'}, body: new URLSearchParams({name, code: roomCode})})
-        .then(res => { window.location.reload() })
-    }
+  const createOrJoin = async (isCreate) => {
+  if (!name.trim()) return alert('Enter your name')
+  if (!isCreate && !roomCode.trim()) return alert('Enter room code')
+
+  const formData = new URLSearchParams(isCreate ? { name } : { name, code: roomCode })
+
+  const res = await fetch(isCreate ? '/create' : '/join', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+    body: formData
+  })
+
+  const data = await res.json()
+
+  if (!data.success) {
+    alert(data.error || 'Failed to create/join room')
+    return
   }
+
+  // Redirect user to their room (handled by React)
+  const newUrl = `/room/${data.room_code}?name=${encodeURIComponent(data.name)}`
+  window.location.href = newUrl
+}
 
   const saveSettings = () => {
     const s = settings
