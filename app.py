@@ -1,42 +1,34 @@
-
-from flask import Flask, send_from_directory
+# app.py
+from flask import Flask
 from flask_socketio import SocketIO
-import os
 
+from Model.game_manager import GameManager
 from Controller.routes import register_routes
 from Controller.socket_events import register_socket_events
-from Model.game_manager import GameManager
 
-app = Flask(__name__, static_folder='View/dist/assets', template_folder='View')
+# -------------------------------------------------------------
+# Flask app and Socket.IO initialization
+# -------------------------------------------------------------
+app = Flask(__name__, template_folder='View', static_folder='View/static')
 app.config['SECRET_KEY'] = 'prts-is-watching-you'
+
+# Create SocketIO instance
 socketio = SocketIO(app, cors_allowed_origins='*')
 
+# -------------------------------------------------------------
+# Create ONE shared GameManager instance
+# -------------------------------------------------------------
 game_manager = GameManager()
+print(f"[INIT] GameManager instance created: {id(game_manager)}")
 
+# Register routes (Controller)
 register_routes(app, game_manager)
+
+# Register all Socket.IO events (Controller)
 register_socket_events(socketio, game_manager)
 
-DIST_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'View', 'dist')
-
-@app.route('/')
-def spa_index():
-    index_path = os.path.join(DIST_DIR, 'index.html')
-    if os.path.exists(index_path):
-        return send_from_directory(DIST_DIR, 'index.html')
-    return ('<h1>Build the React app first</h1>'
-            '<p>Run: <code>cd View && npm ci && npm run build</code></p>', 200)
-
-@app.route('/app')
-def app_alias():
-    return spa_index()
-
-@app.route('/assets/<path:path>')
-def spa_assets(path):
-    return send_from_directory(app.static_folder, path)
-
-@app.route('/healthz')
-def healthz():
-    return 'ok', 200
-
+# -------------------------------------------------------------
+# Run server
+# -------------------------------------------------------------
 if __name__ == '__main__':
     socketio.run(app, host='0.0.0.0', port=5000)
