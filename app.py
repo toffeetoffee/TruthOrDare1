@@ -1,42 +1,51 @@
-
-from flask import Flask, send_from_directory
-from flask_socketio import SocketIO
+# app.py
 import os
-
+from flask import Flask, send_from_directory, jsonify, request
+from flask_socketio import SocketIO
+from Model.game_manager import GameManager
 from Controller.routes import register_routes
 from Controller.socket_events import register_socket_events
-from Model.game_manager import GameManager
 
-app = Flask(__name__, static_folder='View/dist/assets', template_folder='View')
-app.config['SECRET_KEY'] = 'prts-is-watching-you'
-socketio = SocketIO(app, cors_allowed_origins='*')
+# Serve SPA from View/dist (built by Vite)
+DIST_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "View", "dist")
+
+# Important: static_url_path="" so /assets/* are served correctly
+app = Flask(
+    __name__,
+    static_folder=DIST_DIR,
+    static_url_path="",
+)
+
+# Socket.IO (eventlet on Render)
+socketio = SocketIO(
+    app,
+    cors_allowed_origins="*",
+    async_mode="eventlet",  # important for gunicorn -k eventlet
+)
 
 game_manager = GameManager()
 
+# Your existing REST routes (if any)
 register_routes(app, game_manager)
+
+# Your socket events
 register_socket_events(socketio, game_manager)
 
-DIST_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'View', 'dist')
+# ---- SPA static file handling ----
+# Serve index.html on root
+@app.route("/")
+def index():
+    return send_from_directory(DIST_DIR, "index.html")
 
-@app.route('/')
-def spa_index():
-    index_path = os.path.join(DIST_DIR, 'index.html')
-    if os.path.exists(index_path):
-        return send_from_directory(DIST_DIR, 'index.html')
-    return ('<h1>Build the React app first</h1>'
-            '<p>Run: <code>cd View && npm ci && npm run build</code></p>', 200)
+# Serve any file that exists in dist directly; otherwise fall back to index.html
+@app.route("/<path:path>")
+def static_proxy(path):
+    full_path = os.path.join(DIST_DIR, path)
+    if os.path.isfile(full_path):
+        return send_from_directory(DIST_DIR, path)
+    # SPA fallback (React Router, deep links)
+    return send_from_directory(DIST_DIR, "index.html")
 
-@app.route('/app')
-def app_alias():
-    return spa_index()
-
-@app.route('/assets/<path:path>')
-def spa_assets(path):
-    return send_from_directory(app.static_folder, path)
-
-@app.route('/healthz')
-def healthz():
-    return 'ok', 200
-
-if __name__ == '__main__':
-    socketio.run(app, host='0.0.0.0', port=5000)
+if __name__ == "__main__":
+    # Local dev run
+    socketio.run(app, host="0.0.0.0", port=int(os.environ.get("PORT", 5000)))
