@@ -1,61 +1,100 @@
 <!doctype html>
 <html lang="en" data-bs-theme="auto">
-<head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Truth or Dare – Home</title>
-  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
-  <style>
-    body { padding: 32px 16px; }
-    .brand { letter-spacing: .5px; }
-    .card { border-radius: 1rem; }
-    .logo { max-width: 140px; cursor: pointer; }
-  </style>
-</head>
-<body class="bg-body-tertiary">
-  <main class="container" style="max-width: 760px;">
-    <header class="text-center mb-4">
-      <h1 class="brand fw-bold">Dare or Dare</h1>
-      <p class="text-secondary mb-0">Party game with real‑time rooms.</p>
-    </header>
+  <head>
+    <meta charset="utf-8"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1"/>
+    <title>Dare or Dare — Lobby</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet">
+    <style>
+      :root { --brand: #7c4dff; }
+      body { min-height: 100vh; background: radial-gradient(1200px 600px at 80% -200px, rgba(124,77,255,.15), transparent),
+                                    radial-gradient(800px 500px at -200px 80%, rgba(0,200,200,.12), transparent); }
+      .brand-gradient { background: linear-gradient(135deg, var(--brand), #00c2ff); -webkit-background-clip: text; background-clip: text; color: transparent; }
+      .glass { background: rgba(255,255,255,.7); backdrop-filter: blur(10px); }
+      [data-bs-theme="dark"] .glass { background: rgba(20,22,26,.6); }
+      .room-card { border: 0; box-shadow: 0 10px 30px rgba(0,0,0,.08); }
+      .pulse { animation: pulse 1.2s infinite; }
+      @keyframes pulse { 0%{ transform: scale(1);} 50%{ transform: scale(1.03);} 100%{ transform: scale(1);} }
+    </style>
+  </head>
+  <body class="d-flex align-items-center py-5">
+    <div class="container">
+      <div class="row justify-content-center">
+        <div class="col-lg-8 col-xl-6">
+          <div class="card room-card glass rounded-4 p-2">
+            <div class="card-body p-4 p-md-5">
+              <div class="d-flex align-items-center justify-content-between mb-3">
+                <h1 class="h3 fw-bold brand-gradient m-0">Dare or Dare</h1>
+                <button id="themeToggle" class="btn btn-sm btn-outline-secondary" type="button" aria-label="Toggle theme">
+                  <i class="bi bi-moon-stars" id="themeIcon"></i>
+                </button>
+              </div>
+              <p class="text-secondary">Create a room to host, or join with a 6‑character code.</p>
 
-    <div class="row g-4">
-      <div class="col-12 col-lg-6">
-        <div class="card shadow-sm h-100">
-          <div class="card-body">
-            <h5 class="card-title">Create a Room</h5>
-            <form action="/create" method="post" class="mt-3">
-              <div class="mb-3">
-                <label class="form-label">Your Name</label>
-                <input name="name" class="form-control" placeholder="Enter your name" required>
-              </div>
-              <button class="btn btn-primary w-100" type="submit">Create New Room</button>
-            </form>
-          </div>
-        </div>
-      </div>
+              <div class="row g-3">
+                <div class="col-12">
+                  <form action="/create" method="post" class="needs-validation" novalidate>
+                    <div class="input-group input-group-lg">
+                      <span class="input-group-text"><i class="bi bi-person-plus"></i></span>
+                      <input class="form-control" type="text" name="name" placeholder="Your name" required maxlength="20">
+                      <button class="btn btn-primary" type="submit"><i class="bi bi-play-circle me-1"></i>Create</button>
+                    </div>
+                    <div class="form-text">You’ll become the host of the new room.</div>
+                  </form>
+                </div>
 
-      <div class="col-12 col-lg-6">
-        <div class="card shadow-sm h-100">
-          <div class="card-body">
-            <h5 class="card-title">Join a Room</h5>
-            <form action="/join" method="post" class="mt-3">
-              <div class="mb-3">
-                <label class="form-label">Your Name</label>
-                <input name="name" class="form-control" placeholder="Enter your name" required>
+                <div class="col-12">
+                  <div class="text-center text-muted my-2">or</div>
+                </div>
+
+                <div class="col-12">
+                  <form action="/join" method="post" class="needs-validation" novalidate>
+                    <div class="input-group input-group-lg">
+                      <span class="input-group-text"><i class="bi bi-door-open"></i></span>
+                      <input class="form-control text-uppercase" type="text" name="code" placeholder="ROOMCODE" pattern="[A-Za-z0-9]{6}" minlength="6" maxlength="6" required style="letter-spacing:.2em;">
+                      <input class="form-control" type="text" name="name" placeholder="Your name" required maxlength="20">
+                      <button class="btn btn-success" type="submit"><i class="bi bi-box-arrow-in-right me-1"></i>Join</button>
+                    </div>
+                    <div class="form-text">Room code is 6 letters/numbers.</div>
+                  </form>
+                </div>
               </div>
-              <div class="mb-3">
-                <label class="form-label">Room Code</label>
-                <input name="code" class="form-control text-uppercase" placeholder="ABC123" minlength="4" maxlength="8" required>
+
+              <div class="mt-4 small text-muted">
+                This UI is Bootstrap 5—your Socket.IO logic remains unchanged.
               </div>
-              <button class="btn btn-success w-100" type="submit">Join Room</button>
-            </form>
+            </div>
           </div>
         </div>
       </div>
     </div>
-  </main>
 
-  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
-</body>
+    <script>
+      // Simple theme toggle
+      (function() {
+        const root = document.documentElement;
+        const btn = document.getElementById('themeToggle');
+        const icon = document.getElementById('themeIcon');
+        function flipTheme() {
+          const curr = root.getAttribute('data-bs-theme') || 'auto';
+          const next = curr === 'dark' ? 'light' : 'dark';
+          root.setAttribute('data-bs-theme', next);
+          icon.className = next === 'dark' ? 'bi bi-brightness-high' : 'bi bi-moon-stars';
+        }
+        btn?.addEventListener('click', flipTheme);
+      })();
+      // Basic client-side validation styling
+      (()=>{
+        const forms=document.querySelectorAll('.needs-validation');
+        Array.from(forms).forEach(form=>{
+          form.addEventListener('submit',event=>{
+            if(!form.checkValidity()){event.preventDefault();event.stopPropagation();}
+            form.classList.add('was-validated');
+          },false);
+        });
+      })();
+    </script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+  </body>
 </html>
