@@ -1,14 +1,41 @@
-// Global variables
+// === Bootstrap helpers ===
+let settingsModalInstance = null;
+document.addEventListener('DOMContentLoaded', () => {
+  const modalEl = document.getElementById('settings-modal');
+  if (modalEl) {
+    settingsModalInstance = bootstrap.Modal.getOrCreateInstance(modalEl);
+  }
+
+  // Theme toggle
+  const themeBtn = document.getElementById('themeToggle');
+  const root = document.documentElement;
+  const applyTheme = (t) => root.setAttribute('data-bs-theme', t);
+  try {
+    const saved = localStorage.getItem('theme') || 'light';
+    applyTheme(saved);
+  } catch(e) {}
+  if (themeBtn) {
+    themeBtn.addEventListener('click', () => {
+      const current = root.getAttribute('data-bs-theme') || 'light';
+      const next = current === 'light' ? 'dark' : 'light';
+      applyTheme(next);
+      try { localStorage.setItem('theme', next); } catch(e){}
+      showToast(`Switched to ${next} mode`);
+    });
+  }
+});
+
+// === Global state ===
 let mySocketId = null;
 let hostSocketId = null;
 let gameState = { phase: 'lobby', remaining_time: 0 };
 let timerInterval = null;
 
-// Store default lists
+// Defaults cache
 let defaultTruths = [];
 let defaultDares = [];
 
-// DOM elements
+// DOM refs
 const playerList = document.getElementById('player-list');
 const playerCount = document.getElementById('player-count');
 const hostControls = document.getElementById('host-controls');
@@ -16,53 +43,9 @@ const lobbySection = document.getElementById('lobby-section');
 const gameArea = document.getElementById('game-area');
 const startButton = document.getElementById('start-button');
 
-// ---- Theme persistence (shared with index.html) ----
-(function themeBoot() {
-  const saved = localStorage.getItem('dod-theme') || 'light';
-  document.documentElement.setAttribute('data-bs-theme', saved);
-  const btn = document.getElementById('themeToggle');
-  const apply = (mode) => {
-    document.documentElement.setAttribute('data-bs-theme', mode);
-    localStorage.setItem('dod-theme', mode);
-    if (btn) btn.textContent = (mode === 'dark') ? '🌙 Dark' : '🌞 Light';
-  };
-  if (btn) {
-    btn.addEventListener('click', () => {
-      const next = (document.documentElement.getAttribute('data-bs-theme') === 'dark') ? 'light' : 'dark';
-      apply(next);
-    });
-  }
-  apply(saved);
-})();
-
-// ---- Toast helper (Bootstrap 5) ----
-function showToast(title, body, variant = 'primary') {
-  const container = document.getElementById('toast-container');
-  const id = `t${Date.now()}${Math.floor(Math.random()*999)}`;
-  const el = document.createElement('div');
-  el.className = `toast align-items-center text-bg-${variant} border-0`;
-  el.id = id;
-  el.role = 'alert';
-  el.ariaLive = 'assertive';
-  el.ariaAtomic = 'true';
-  el.innerHTML = `
-    <div class="d-flex">
-      <div class="toast-body">
-        <strong class="me-2">${title}</strong>${body || ''}
-      </div>
-      <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
-    </div>
-  `;
-  container.appendChild(el);
-  const t = new bootstrap.Toast(el, { delay: 3000 });
-  t.show();
-  el.addEventListener('hidden.bs.toast', () => el.remove());
-}
-
-// Socket connection
+// Socket
 const socket = io();
 
-// Join the room when connected
 socket.on('connect', () => {
   mySocketId = socket.id;
   socket.emit('join', { room: ROOM_CODE, name: PLAYER_NAME });
@@ -70,151 +53,155 @@ socket.on('connect', () => {
   socket.emit('get_default_lists', { room: ROOM_CODE });
 });
 
-// Settings updated
+// --- Settings ---
 socket.on('settings_updated', (data) => {
-  if (data.settings) {
-    document.getElementById('setting-countdown').value = data.settings.countdown_duration ?? 10;
-    document.getElementById('setting-preparation').value = data.settings.preparation_duration ?? 30;
-    document.getElementById('setting-selection').value = data.settings.selection_duration ?? 10;
-    document.getElementById('setting-truthdare').value = data.settings.truth_dare_duration ?? 60;
-    document.getElementById('setting-skip').value = data.settings.skip_duration ?? 5;
-    document.getElementById('setting-maxrounds').value = data.settings.max_rounds ?? 10;
-    document.getElementById('setting-minigame').value = data.settings.minigame_chance ?? 20;
-    document.getElementById('setting-ai-generation').checked = (data.settings.ai_generation_enabled ?? true);
-  }
+  if (!data || !data.settings) return;
+  const s = data.settings;
+  const $ = (id) => document.getElementById(id);
+  $('setting-countdown').value = s.countdown_duration ?? 10;
+  $('setting-preparation').value = s.preparation_duration ?? 30;
+  $('setting-selection').value = s.selection_duration ?? 10;
+  $('setting-truthdare').value = s.truth_dare_duration ?? 60;
+  $('setting-skip').value = s.skip_duration ?? 5;
+  $('setting-maxrounds').value = s.max_rounds ?? 10;
+  $('setting-minigame').value = s.minigame_chance ?? 20;
+  $('setting-ai-generation').checked = (s.ai_generation_enabled ?? true);
 });
 
-// Default lists updated
+// --- Default lists ---
 socket.on('default_lists_updated', (data) => {
-  if (data.truths !== undefined) {
-    defaultTruths = data.truths;
-    renderDefaultList('truth');
-  }
-  if (data.dares !== undefined) {
-    defaultDares = data.dares;
-    renderDefaultList('dare');
-  }
+  if (data.truths !== undefined) { defaultTruths = data.truths; renderDefaultList('truth'); }
+  if (data.dares !== undefined) { defaultDares = data.dares; renderDefaultList('dare'); }
 });
 
-// Preset signals
-socket.on('preset_loaded', (data) => showToast('Preset', data.message || 'Loaded.', 'success'));
-socket.on('preset_error', (data) => showToast('Error', data.message || 'Something went wrong.', 'danger'));
+socket.on('preset_loaded', (data) => showToast(data.message || 'Preset loaded'));
+socket.on('preset_error', (data) => showToast('Preset error: ' + (data.message || 'Unknown'), 'danger'));
 
-// Player list update
+// --- Player list ---
 socket.on('player_list', (data) => {
-  if (!data.players || data.players.length === 0) {
-    playerList.innerHTML = '<li class="list-group-item text-body-secondary">Waiting for players...</li>';
-    playerCount.textContent = '';
-    return;
-  }
-
-  hostSocketId = data.host_sid;
-
-  // Update player checkboxes (exclude current player)
-  const playerCheckboxes = document.getElementById('player-checkboxes');
-  const otherPlayers = data.players.filter(name => name !== PLAYER_NAME);
-  if (playerCheckboxes) {
-    if (otherPlayers.length === 0) {
-      playerCheckboxes.innerHTML = '<div class="text-center text-body-secondary">No other players yet</div>';
-    } else {
-      playerCheckboxes.innerHTML = otherPlayers.map(name => `
-        <div class="player-checkbox-item form-check">
-          <input class="form-check-input" type="checkbox" name="target-player" value="${escapeHtml(name)}" id="cb-${escapeHtml(name)}">
-          <label class="form-check-label" for="cb-${escapeHtml(name)}">${escapeHtml(name)}</label>
-        </div>
-      `).join('');
+  try {
+    if (!data.players || data.players.length === 0) {
+      playerList.innerHTML = '<li class="list-group-item text-secondary">Waiting for players...</li>';
+      playerCount.textContent = '';
+      hostControls.classList.add('d-none');
+      return;
     }
+
+    hostSocketId = data.host_sid;
+
+    // Targets (exclude self)
+    const playerCheckboxes = document.getElementById('player-checkboxes');
+    const otherPlayers = data.players.filter(n => n !== PLAYER_NAME);
+    if (playerCheckboxes) {
+      playerCheckboxes.innerHTML = otherPlayers.length === 0
+        ? '<div class="text-secondary text-center">No other players yet</div>'
+        : otherPlayers.map(name => `
+            <div class="form-check">
+              <input class="form-check-input" type="checkbox" name="target-player" value="${escapeHtml(name)}" id="cb-${escapeHtml(name)}">
+              <label class="form-check-label" for="cb-${escapeHtml(name)}">${escapeHtml(name)}</label>
+            </div>`).join('');
+    }
+
+    // Visible player list
+    playerList.innerHTML = data.players.map((name, idx) => {
+      const isHost = (data.host_name ? data.host_name === name : idx === 0);
+      const badge = isHost ? '<span class="badge text-bg-warning ms-2">Host</span>' : '';
+      return `<li class="list-group-item d-flex justify-content-between align-items-center">
+                <span>${escapeHtml(name)}</span>${badge}
+              </li>`;
+    }).join('');
+
+    playerCount.textContent = `${data.players.length} player(s) in room`;
+
+    // Host controls visible only to host
+    if (mySocketId === hostSocketId) {
+      hostControls.classList.remove('d-none');
+    } else {
+      hostControls.classList.add('d-none');
+    }
+  } catch(e) {
+    console.error(e);
   }
-
-  // Display all players
-  playerList.innerHTML = data.players.map((name, index) => {
-    const isHost = (index === 0);
-    const badge = isHost ? ' <span class="badge text-bg-warning ms-2">Host</span>' : '';
-    return `<li class="list-group-item d-flex align-items-center">${escapeHtml(name)}${badge}</li>`;
-  }).join('');
-
-  playerCount.textContent = `${data.players.length} player(s) in room`;
-
-  // Toggle host controls (using presence of host id)
-  const isHost = (mySocketId && hostSocketId && mySocketId === hostSocketId);
-  document.getElementById('openSettingsBtn').disabled = !isHost;
-  startButton.disabled = !isHost;
 });
 
-// Game state update
+// --- Game state ---
 socket.on('game_state_update', (data) => {
-  gameState = data;
+  gameState = data || gameState;
   updateGameUI();
 });
 
-// Submission success
+// --- Submissions ---
 socket.on('submission_success', (data) => {
   const successDiv = document.getElementById('submission-success');
   const targetList = (data.targets || []).join(', ');
-  successDiv.textContent = `✓ Added ${data.type}: "${data.text}" to ${targetList}`;
+  successDiv.textContent = `✔ Added ${data.type}: "${data.text}" to ${targetList}`;
   successDiv.classList.remove('d-none');
   document.getElementById('truth-dare-text').value = '';
   deselectAllPlayers();
-  setTimeout(() => successDiv.classList.add('d-none'), 2200);
-  showToast('Submitted', `${escapeHtml(data.type)} added for ${escapeHtml(targetList)}`, 'success');
+  setTimeout(() => successDiv.classList.add('d-none'), 2000);
 });
 
-// Room destroyed
+// --- Room lifecycle ---
 socket.on('room_destroyed', () => {
-  showToast('Room', 'The host has closed the room.', 'warning');
-  setTimeout(() => (window.location.href = '/'), 800);
+  showToast('The host has closed the room', 'warning');
+  setTimeout(() => window.location.href = '/', 500);
 });
 
-// Left room
 socket.on('left_room', () => {
-  window.location.href = '/';
+  setTimeout(() => window.location.href = '/', 200);
 });
 
-// ----- UI helpers for phases -----
-function show(el) { el.classList.remove('d-none'); }
-function hide(el) { el.classList.add('d-none'); }
-
+// === UI Update ===
 function updateGameUI() {
-  const sections = [
-    'countdown-section','preparation-section','selection-section',
-    'minigame-section','truth-dare-section','end-game-section'
-  ];
-  sections.forEach(id => hide(document.getElementById(id)));
+  const show = (id, on) => document.getElementById(id).classList.toggle('d-none', !on);
+
+  // Sections reset
+  ['countdown-section','preparation-section','selection-section','minigame-section','truth-dare-section','end-game-section']
+    .forEach(id => show(id, false));
 
   if (gameState.phase === 'end_game') {
     lobbySection.classList.add('d-none');
-    show(gameArea);
-    show(document.getElementById('end-game-section'));
-    const endGameHostControls = document.getElementById('end-game-host-controls');
-    if (mySocketId === hostSocketId) show(endGameHostControls); else hide(endGameHostControls);
+    gameArea.classList.remove('d-none');
+    show('end-game-section', true);
+
+    const endHost = document.getElementById('end-game-host-controls');
+    if (mySocketId === hostSocketId) endHost.classList.remove('d-none'); else endHost.classList.add('d-none');
     displayTopPlayers();
     displayRoundHistory();
-  } else if (gameState.phase === 'minigame') {
+    return;
+  }
+
+  if (gameState.phase === 'minigame') {
     lobbySection.classList.add('d-none');
-    show(gameArea);
-    show(document.getElementById('minigame-section'));
+    gameArea.classList.remove('d-none');
+    show('minigame-section', true);
+
     if (gameState.minigame) {
       const m = gameState.minigame;
       const participants = m.participants || [];
+
       document.querySelector('.minigame-title').textContent = m.name || 'Mini Game';
       document.querySelector('.minigame-description').textContent = m.description_voter || '';
       document.querySelector('.voting-instruction').textContent = m.vote_instruction || 'Vote for the loser!';
+
       document.getElementById('participant-1').textContent = participants[0] || 'Player 1';
       document.getElementById('participant-2').textContent = participants[1] || 'Player 2';
+
       const voteCounts = m.vote_counts || {};
       const votes1 = voteCounts[participants[0]] || 0;
       const votes2 = voteCounts[participants[1]] || 0;
       document.getElementById('participant-1-votes').textContent = `${votes1} vote${votes1 !== 1 ? 's' : ''}`;
       document.getElementById('participant-2-votes').textContent = `${votes2} vote${votes2 !== 1 ? 's' : ''}`;
+
       const isParticipant = participants.includes(PLAYER_NAME);
       if (isParticipant) {
-        hide(document.getElementById('minigame-voting'));
-        const msgBox = document.getElementById('minigame-participant-message');
-        show(msgBox);
-        msgBox.querySelector('p:first-child').textContent = m.description_participant || 'You are participating!';
+        document.getElementById('minigame-voting').classList.add('d-none');
+        const msg = document.getElementById('minigame-participant-message');
+        msg.classList.remove('d-none');
+        msg.querySelector('p:first-child').textContent = m.description_participant || 'You are participating!';
       } else {
-        show(document.getElementById('minigame-voting'));
-        hide(document.getElementById('minigame-participant-message'));
+        document.getElementById('minigame-voting').classList.remove('d-none');
+        document.getElementById('minigame-participant-message').classList.add('d-none');
         const btn1 = document.getElementById('vote-btn-1');
         const btn2 = document.getElementById('vote-btn-2');
         btn1.disabled = false; btn2.disabled = false;
@@ -226,201 +213,133 @@ function updateGameUI() {
         document.getElementById('minigame-required-votes').textContent = m.total_voters || 0;
       }
     }
-  } else if (gameState.phase === 'countdown') {
+    return;
+  }
+
+  if (gameState.phase === 'countdown') {
     lobbySection.classList.add('d-none');
-    show(gameArea);
-    show(document.getElementById('countdown-section'));
+    gameArea.classList.remove('d-none');
+    show('countdown-section', true);
     startCountdownTimer();
-  } else if (gameState.phase === 'preparation') {
+    return;
+  }
+
+  if (gameState.phase === 'preparation') {
     lobbySection.classList.add('d-none');
-    show(gameArea);
-    show(document.getElementById('preparation-section'));
+    gameArea.classList.remove('d-none');
+    show('preparation-section', true);
     startPreparationTimer();
-  } else if (gameState.phase === 'selection') {
+    return;
+  }
+
+  if (gameState.phase === 'selection') {
     lobbySection.classList.add('d-none');
-    show(gameArea);
-    show(document.getElementById('selection-section'));
-    const playerNameElement = document.getElementById('selected-player-name');
+    gameArea.classList.remove('d-none');
+    show('selection-section', true);
+
     if (gameState.selected_player) {
-      playerNameElement.textContent = gameState.selected_player;
-      const isSelectedPlayer = (gameState.selected_player === PLAYER_NAME);
+      document.getElementById('selected-player-name').textContent = gameState.selected_player;
+      const isSelected = (gameState.selected_player === PLAYER_NAME);
       const choiceButtons = document.getElementById('truth-dare-choice');
       const choiceMade = document.getElementById('choice-made');
-      if (isSelectedPlayer && !gameState.selected_choice) {
-        show(choiceButtons); hide(choiceMade);
+      if (isSelected && !gameState.selected_choice) {
+        choiceButtons.classList.remove('d-none');
+        choiceMade.classList.add('d-none');
       } else {
-        hide(choiceButtons);
+        choiceButtons.classList.add('d-none');
         if (gameState.selected_choice) {
-          show(choiceMade);
+          choiceMade.classList.remove('d-none');
           document.getElementById('choice-display').textContent = gameState.selected_choice.toUpperCase();
         }
       }
     }
     startSelectionTimer();
-  } else if (gameState.phase === 'truth_dare') {
+    return;
+  }
+
+  if (gameState.phase === 'truth_dare') {
     lobbySection.classList.add('d-none');
-    show(gameArea);
-    show(document.getElementById('truth-dare-section'));
-    const emptyListBanner = document.getElementById('empty-list-banner');
-    if (gameState.list_empty) emptyListBanner.classList.remove('d-none'); else emptyListBanner.classList.add('d-none');
+    gameArea.classList.remove('d-none');
+    show('truth-dare-section', true);
+
+    const emptyBanner = document.getElementById('empty-list-banner');
+    emptyBanner.classList.toggle('d-none', !gameState.list_empty);
+
     const phaseType = document.getElementById('phase-type');
     const performingPlayer = document.getElementById('performing-player-name');
     const challengeText = document.getElementById('challenge-text');
-    if (gameState.selected_choice) phaseType.textContent = gameState.selected_choice.toUpperCase();
-    if (gameState.selected_player) performingPlayer.textContent = gameState.selected_player;
+    if (gameState.selected_choice) { phaseType.textContent = gameState.selected_choice.toUpperCase(); }
+    if (gameState.selected_player) { performingPlayer.textContent = gameState.selected_player; }
     if (gameState.current_truth_dare) {
       challengeText.textContent = gameState.current_truth_dare.text;
       if (gameState.list_empty) {
-        challengeText.classList.add('border-warning', 'bg-warning-subtle');
+        challengeText.classList.add('border-warning','bg-warning-subtle');
       } else {
-        challengeText.classList.remove('border-warning', 'bg-warning-subtle');
+        challengeText.classList.remove('border-warning','bg-warning-subtle');
       }
     }
+
     const isSelectedPlayer = (gameState.selected_player === PLAYER_NAME);
     const voteSection = document.getElementById('vote-section');
+    voteSection.classList.toggle('d-none', isSelectedPlayer);
+
     if (!isSelectedPlayer) {
-      show(voteSection);
       const voteSkipButton = document.getElementById('vote-skip-button');
       if (gameState.list_empty) {
         voteSkipButton.disabled = true;
         voteSkipButton.textContent = '⚠️ List Empty - Skip Auto-Activated!';
-        voteSkipButton.classList.remove('btn-outline-secondary');
-        voteSkipButton.classList.add('btn-warning', 'text-dark');
+        voteSkipButton.className = 'btn btn-warning';
       } else if (gameState.skip_activated) {
         voteSkipButton.disabled = true;
         voteSkipButton.textContent = 'Skip Activated!';
+        voteSkipButton.className = 'btn btn-secondary';
       } else {
         voteSkipButton.disabled = false;
         voteSkipButton.textContent = 'Vote to Skip';
-        voteSkipButton.classList.add('btn-outline-secondary');
-        voteSkipButton.classList.remove('btn-warning', 'text-dark');
+        voteSkipButton.className = 'btn btn-secondary';
       }
       const totalPlayers = playerList.children.length;
       const otherPlayersCount = totalPlayers - 1;
       const requiredVotes = Math.ceil(otherPlayersCount / 2);
       document.getElementById('vote-count').textContent = gameState.skip_vote_count || 0;
       document.getElementById('required-votes').textContent = requiredVotes;
-    } else {
-      hide(voteSection);
     }
     startTruthDareTimer();
-  } else if (gameState.phase === 'lobby') {
-    lobbySection.classList.remove('d-none');
-    hide(gameArea);
-  }
-}
-
-function displayTopPlayers() {
-  const topPlayersList = document.getElementById('top-players-list');
-  if (!gameState.top_players || gameState.top_players.length === 0) {
-    topPlayersList.innerHTML = '<div class="text-body-secondary text-center">No players</div>';
     return;
   }
-  topPlayersList.innerHTML = gameState.top_players.map((player, index) => {
-    const rank = index + 1;
-    const medal = rank === 1 ? '🥇' : rank === 2 ? '🥈' : rank === 3 ? '🥉' : '';
-    return `
-      <div class="d-flex justify-content-between border-bottom py-1">
-        <span>${medal} #${rank} ${escapeHtml(player.name)}</span>
-        <span class="text-body-secondary">${player.score} pts</span>
-      </div>
-    `;
-  }).join('');
+
+  // Lobby fallback
+  lobbySection.classList.remove('d-none');
+  gameArea.classList.add('d-none');
 }
 
-function displayRoundHistory() {
-  const roundHistoryList = document.getElementById('round-history-list');
-  if (!gameState.round_history || gameState.round_history.length === 0) {
-    roundHistoryList.innerHTML = '<div class="text-body-secondary text-center">No rounds played</div>';
-    return;
-  }
-  const reversedHistory = [...gameState.round_history].reverse();
-  roundHistoryList.innerHTML = reversedHistory.map(round => {
-    const submitterText = round.submitted_by 
-      ? `<div class="small text-body-secondary">Submitted by: ${escapeHtml(round.submitted_by)}</div>`
-      : '<div class="small text-body-secondary">Default challenge</div>';
-    return `
-      <div class="mb-3">
-        <div class="fw-semibold">Round ${round.round_number}</div>
-        <div><span class="fw-semibold">${escapeHtml(round.selected_player)}</span> performed a <strong>${round.truth_dare.type}</strong></div>
-        <div class="fst-italic">"${escapeHtml(round.truth_dare.text)}"</div>
-        ${submitterText}
-      </div>
-    `;
-  }).join('');
+// === Timers ===
+function startCountdownTimer(){ clearInterval(timerInterval); timerInterval = setInterval(() => {
+  const el = document.getElementById('countdown-timer'); if (el){ el.textContent = Math.max(0, gameState.remaining_time); gameState.remaining_time--; } }, 1000); }
+function startPreparationTimer(){ clearInterval(timerInterval); timerInterval = setInterval(() => {
+  const el = document.getElementById('prep-timer'); if (el){ el.textContent = Math.max(0, gameState.remaining_time); gameState.remaining_time--; } }, 1000); }
+function startSelectionTimer(){ clearInterval(timerInterval); timerInterval = setInterval(() => {
+  const el = document.getElementById('selection-timer'); if (el){ el.textContent = Math.max(0, gameState.remaining_time); gameState.remaining_time--; } }, 1000); }
+function startTruthDareTimer(){ clearInterval(timerInterval); timerInterval = setInterval(() => {
+  const el = document.getElementById('truth-dare-timer'); if (el){ el.textContent = Math.max(0, gameState.remaining_time); gameState.remaining_time--; } }, 1000); }
+
+// === Actions ===
+function leaveRoom(){
+  if (!confirm('Leave this room?')) return;
+  socket.emit('leave', { room: ROOM_CODE });
+  try { socket.disconnect(); } catch(e) {}
 }
 
-function startCountdownTimer() {
-  clearInterval(timerInterval);
-  timerInterval = setInterval(() => {
-    const timer = document.getElementById('countdown-timer');
-    if (timer) {
-      timer.textContent = Math.max(0, gameState.remaining_time);
-      gameState.remaining_time--;
-    }
-  }, 1000);
+function destroyRoom(){
+  if (!confirm('Destroy this room for everyone?')) return;
+  socket.emit('destroy_room', { room: ROOM_CODE });
 }
 
-function startPreparationTimer() {
-  clearInterval(timerInterval);
-  timerInterval = setInterval(() => {
-    const timer = document.getElementById('prep-timer');
-    if (timer) {
-      timer.textContent = Math.max(0, gameState.remaining_time);
-      gameState.remaining_time--;
-    }
-  }, 1000);
-}
+function openSettings(){ settingsModalInstance?.show(); }
+function closeSettings(){ settingsModalInstance?.hide(); }
 
-function startSelectionTimer() {
-  clearInterval(timerInterval);
-  timerInterval = setInterval(() => {
-    const timer = document.getElementById('selection-timer');
-    if (timer) {
-      timer.textContent = Math.max(0, gameState.remaining_time);
-      gameState.remaining_time--;
-    }
-  }, 1000);
-}
-
-function startTruthDareTimer() {
-  clearInterval(timerInterval);
-  timerInterval = setInterval(() => {
-    const timer = document.getElementById('truth-dare-timer');
-    if (timer) {
-      timer.textContent = Math.max(0, gameState.remaining_time);
-      gameState.remaining_time--;
-    }
-  }, 1000);
-}
-
-// Functions
-function leaveRoom() {
-  if (confirm('Are you sure you want to leave the room?')) {
-    socket.emit('leave', { room: ROOM_CODE });
-  }
-}
-
-function destroyRoom() {
-  if (confirm('Are you sure you want to destroy the room? All players will be kicked.')) {
-    socket.emit('destroy_room', { room: ROOM_CODE });
-    window.location.href = '/';
-  }
-}
-
-// Bootstrap modal control but keep existing IDs for compatibility
-let settingsModalInstance = null;
-function openSettings() {
-  const modalEl = document.getElementById('settings-modal');
-  settingsModalInstance = settingsModalInstance || new bootstrap.Modal(modalEl);
-  settingsModalInstance.show();
-}
-function closeSettings() {
-  if (settingsModalInstance) settingsModalInstance.hide();
-}
-
-function saveSettings() {
-  const settings = {
+function saveSettings(){
+  const s = {
     countdown_duration: parseInt(document.getElementById('setting-countdown').value),
     preparation_duration: parseInt(document.getElementById('setting-preparation').value),
     selection_duration: parseInt(document.getElementById('setting-selection').value),
@@ -430,178 +349,109 @@ function saveSettings() {
     minigame_chance: parseInt(document.getElementById('setting-minigame').value),
     ai_generation_enabled: document.getElementById('setting-ai-generation').checked
   };
-  if (settings.countdown_duration < 3 || settings.countdown_duration > 30) { alert('Countdown duration must be between 3 and 30 seconds'); return; }
-  if (settings.preparation_duration < 10 || settings.preparation_duration > 120) { alert('Preparation duration must be between 10 and 120 seconds'); return; }
-  if (settings.selection_duration < 5 || settings.selection_duration > 30) { alert('Selection duration must be between 5 and 30 seconds'); return; }
-  if (settings.truth_dare_duration < 30 || settings.truth_dare_duration > 180) { alert('Truth/Dare duration must be between 30 and 180 seconds'); return; }
-  if (settings.skip_duration < 3 || settings.skip_duration > 30) { alert('Skip duration must be between 3 and 30 seconds'); return; }
-  if (settings.max_rounds < 1 || settings.max_rounds > 50) { alert('Maximum rounds must be between 1 and 50'); return; }
-  if (settings.minigame_chance < 0 || settings.minigame_chance > 100) { alert('Minigame chance must be between 0 and 100%'); return; }
-  socket.emit('update_settings', { room: ROOM_CODE, settings });
+  if (s.countdown_duration < 3 || s.countdown_duration > 30) return alert('Countdown must be 3-30s');
+  if (s.preparation_duration < 10 || s.preparation_duration > 120) return alert('Preparation must be 10-120s');
+  if (s.selection_duration < 5 || s.selection_duration > 30) return alert('Selection must be 5-30s');
+  if (s.truth_dare_duration < 30 || s.truth_dare_duration > 180) return alert('Truth/Dare must be 30-180s');
+  if (s.skip_duration < 3 || s.skip_duration > 30) return alert('Skip must be 3-30s');
+  if (s.max_rounds < 1 || s.max_rounds > 50) return alert('Max rounds must be 1-50');
+  if (s.minigame_chance < 0 || s.minigame_chance > 100) return alert('Minigame chance must be 0-100%');
+  socket.emit('update_settings', { room: ROOM_CODE, settings: s });
+  showToast('Settings saved', 'success');
   closeSettings();
 }
 
-function startGame() {
+function startGame(){
   startButton.disabled = true;
   socket.emit('start_game', { room: ROOM_CODE });
+  setTimeout(()=> startButton.disabled = false, 1500);
 }
 
-function restartGame() {
-  if (confirm('Are you sure you want to restart the game? All scores will be reset.')) {
-    socket.emit('restart_game', { room: ROOM_CODE });
-  }
+function restartGame(){
+  if (!confirm('Restart game and reset scores?')) return;
+  socket.emit('restart_game', { room: ROOM_CODE });
 }
 
-function voteMinigame(playerName) {
+function voteMinigame(playerName){
   if (!playerName) return;
   document.getElementById('vote-btn-1').disabled = true;
   document.getElementById('vote-btn-2').disabled = true;
   socket.emit('minigame_vote', { room: ROOM_CODE, voted_player: playerName });
 }
 
-function selectAllPlayers() {
-  const checkboxes = document.querySelectorAll('input[name="target-player"]');
-  checkboxes.forEach(cb => cb.checked = true);
+function selectAllPlayers(){
+  document.querySelectorAll('input[name="target-player"]').forEach(cb => cb.checked = true);
 }
 
-function deselectAllPlayers() {
-  const checkboxes = document.querySelectorAll('input[name="target-player"]');
-  checkboxes.forEach(cb => cb.checked = false);
+function deselectAllPlayers(){
+  document.querySelectorAll('input[name="target-player"]').forEach(cb => cb.checked = false);
 }
 
-function submitTruthDare() {
+function submitTruthDare(){
   const text = document.getElementById('truth-dare-text').value.trim();
   const type = document.getElementById('truth-dare-type').value;
-  const checkboxes = document.querySelectorAll('input[name="target-player"]:checked');
-  const targets = Array.from(checkboxes).map(cb => cb.value);
-  if (!text) { alert('Please enter a truth or dare!'); return; }
-  if (targets.length === 0) { alert('Please select at least one player!'); return; }
+  const targets = Array.from(document.querySelectorAll('input[name="target-player"]:checked')).map(cb => cb.value);
+  if (!text) return alert('Please enter a truth or dare');
+  if (!targets.length) return alert('Please select at least one player');
   socket.emit('submit_truth_dare', { room: ROOM_CODE, text, type, targets });
 }
 
-function selectTruthDare(choice) {
+function selectTruthDare(choice){
   socket.emit('select_truth_dare', { room: ROOM_CODE, choice });
 }
 
-function voteSkip() {
-  const button = document.getElementById('vote-skip-button');
-  button.disabled = true;
-  button.textContent = 'Vote Submitted';
+function voteSkip(){
+  const btn = document.getElementById('vote-skip-button');
+  btn.disabled = true; btn.textContent = 'Vote Submitted';
   socket.emit('vote_skip', { room: ROOM_CODE });
 }
 
-// Simple HTML escape
-function escapeHtml(text) {
-  const div = document.createElement('div');
-  div.textContent = text;
-  return div.innerHTML;
-}
+// === Utilities ===
+function escapeHtml(text){ const div = document.createElement('div'); div.textContent = text; return div.innerHTML; }
 
-// Default lists renderers (tabs now use Bootstrap pills)
-function renderDefaultList(type) {
+function renderDefaultList(type){
   const listContainer = document.getElementById(`default-${type}s-list`);
   const items = type === 'truth' ? defaultTruths : defaultDares;
-  if (items.length === 0) {
-    listContainer.innerHTML = `<div class="text-body-secondary">No default ${type}s yet. Click "Add ${type === 'truth' ? 'Truth' : 'Dare'}" to add one.</div>`;
+  if (!listContainer) return;
+  if ((items || []).length === 0){
+    listContainer.innerHTML = `<div class="text-secondary">No default ${type}s yet. Click "Add ${type==='truth'?'Truth':'Dare'}".</div>`;
     return;
   }
-  listContainer.innerHTML = items.map((text, index) => `
-    <div class="default-list-item" onclick="toggleItemSelection(event, '${type}', ${index})">
-      <input type="checkbox" class="form-check-input me-2" 
-             id="default-${type}-${index}" 
-             data-type="${type}" 
-             data-text="${escapeHtml(text)}"
-             onclick="event.stopPropagation()">
-      <label class="form-check-label default-list-item-text" for="default-${type}-${index}">${escapeHtml(text)}</label>
-    </div>
+  listContainer.innerHTML = items.map((text, i)=> `
+    <label class="list-group-item d-flex align-items-center gap-2">
+      <input class="form-check-input me-1" type="checkbox" data-type="${type}" data-text="${escapeHtml(text)}">
+      <span class="small">${escapeHtml(text)}</span>
+    </label>
   `).join('');
 }
 
-function toggleItemSelection(event, type, index) {
-  const checkbox = document.getElementById(`default-${type}-${index}`);
-  checkbox.checked = !checkbox.checked;
-  const item = event.currentTarget;
-  if (checkbox.checked) item.classList.add('selected'); else item.classList.remove('selected');
+function selectAllItems(type){
+  document.querySelectorAll(`input[data-type="${type}"]`).forEach(cb => cb.checked = true);
 }
-
-function selectAllItems(type) {
-  const checkboxes = document.querySelectorAll(`input[data-type="${type}"]`);
-  checkboxes.forEach(cb => { cb.checked = true; cb.closest('.default-list-item').classList.add('selected'); });
+function deselectAllItems(type){
+  document.querySelectorAll(`input[data-type="${type}"]`).forEach(cb => cb.checked = false);
 }
-
-function deselectAllItems(type) {
-  const checkboxes = document.querySelectorAll(`input[data-type="${type}"]`);
-  checkboxes.forEach(cb => { cb.checked = false; cb.closest('.default-list-item').classList.remove('selected'); });
-}
-
-// Add/edit/remove defaults
-function addDefaultItem(type) {
+function addDefaultItem(type){
   const text = prompt(`Enter a new default ${type}:`);
   if (!text || !text.trim()) return;
-  if (type === 'truth') {
-    socket.emit('add_default_truth', { room: ROOM_CODE, text: text.trim() });
-  } else {
-    socket.emit('add_default_dare', { room: ROOM_CODE, text: text.trim() });
-  }
+  if (type === 'truth'){ socket.emit('add_default_truth', { room: ROOM_CODE, text: text.trim() }); }
+  else { socket.emit('add_default_dare', { room: ROOM_CODE, text: text.trim() }); }
 }
-function editDefaultItem(type) {
-  const checkboxes = document.querySelectorAll(`input[data-type="${type}"]:checked`);
-  if (checkboxes.length === 0) { alert('Please select one item to edit'); return; }
-  if (checkboxes.length > 1) { alert('Please select only one item to edit'); return; }
-  const oldText = checkboxes[0].dataset.text;
-  const newText = prompt(`Edit ${type}:`, oldText);
-  if (!newText || !newText.trim() || newText.trim() === oldText) return;
-  if (type === 'truth') {
-    socket.emit('edit_default_truth', { room: ROOM_CODE, old_text: oldText, new_text: newText.trim() });
-  } else {
-    socket.emit('edit_default_dare', { room: ROOM_CODE, old_text: oldText, new_text: newText.trim() });
-  }
+function editDefaultItem(type){
+  const selected = Array.from(document.querySelectorAll(`input[data-type="${type}"]:checked`));
+  if (selected.length === 0) return alert('Please select one item to edit');
+  if (selected.length > 1) return alert('Please select only one item');
+  const oldText = selected[0].dataset.text;
+  const nv = prompt(`Edit ${type}:`, oldText);
+  if (!nv || !nv.trim() || nv.trim() === oldText) return;
+  if (type === 'truth'){ socket.emit('edit_default_truth', { room: ROOM_CODE, old_text: oldText, new_text: nv.trim() }); }
+  else { socket.emit('edit_default_dare', { room: ROOM_CODE, old_text: oldText, new_text: nv.trim() }); }
 }
-function removeDefaultItems(type) {
-  const checkboxes = document.querySelectorAll(`input[data-type="${type}"]:checked`);
-  if (checkboxes.length === 0) { alert('Please select at least one item to remove'); return; }
-  const count = checkboxes.length;
-  if (!confirm(`Are you sure you want to remove ${count} ${type}${count > 1 ? 's' : ''}?`)) return;
-  const textsToRemove = Array.from(checkboxes).map(cb => cb.dataset.text);
-  if (type === 'truth') {
-    socket.emit('remove_default_truths', { room: ROOM_CODE, texts: textsToRemove });
-  } else {
-    socket.emit('remove_default_dares', { room: ROOM_CODE, texts: textsToRemove });
-  }
-}
-
-// Presets
-function savePreset() {
-  if (defaultTruths.length === 0 && defaultDares.length === 0) { alert('No truths or dares to save!'); return; }
-  const preset = { truths: defaultTruths, dares: defaultDares };
-  const jsonString = JSON.stringify(preset, null, 2);
-  const blob = new Blob([jsonString], { type: 'application/json' });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url; a.download = `truth_dare_preset_${new Date().toISOString().split('T')[0]}.json`;
-  document.body.appendChild(a); a.click(); document.body.removeChild(a);
-  URL.revokeObjectURL(url);
-  showToast('Preset saved', `${defaultTruths.length} truths / ${defaultDares.length} dares`, 'success');
-}
-function triggerLoadPreset() {
-  document.getElementById('load-preset-file').click();
-}
-function loadPresetFile(event) {
-  const file = event.target.files[0]; if (!file) return;
-  if (!file.name.endsWith('.json')) { alert('Please select a JSON file'); event.target.value = ''; return; }
-  if (!confirm('Loading a preset will replace your current truths and dares lists. Continue?')) { event.target.value=''; return; }
-  const reader = new FileReader();
-  reader.onload = function(e) {
-    try {
-      const fileContent = e.target.result;
-      JSON.parse(fileContent);
-      socket.emit('load_preset_file', { room: ROOM_CODE, file_data: fileContent });
-      showToast('Preset', 'Uploading…', 'primary');
-    } catch (error) {
-      alert('Invalid JSON file: ' + error.message);
-    }
-    event.target.value = '';
-  };
-  reader.onerror = function() { alert('Error reading file'); event.target.value = ''; };
-  reader.readAsText(file);
+function removeDefaultItems(type){
+  const selected = Array.from(document.querySelectorAll(`input[data-type="${type}"]:checked`));
+  if (selected.length === 0) return alert('Please select items to remove');
+  if (!confirm(`Remove ${selected.length} ${type}${selected.length>1?'s':''}?`)) return;
+  const textsToRemove = selected.map(cb => cb.dataset.text);
+  if (type === 'truth'){ socket.emit('remove_default_truths', { room: ROOM_CODE, texts: textsToRemove }); }
+  else { socket.emit('remove_default_dares', { room: ROOM_CODE, texts: textsToRemove }); }
 }
