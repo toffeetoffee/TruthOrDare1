@@ -1,8 +1,0 @@
-:root {
-  --radius: 14px;
-}
-.card, .btn, .form-control, .form-select, .modal-content {
-  border-radius: var(--radius);
-}
-.monospace { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
-.btn-file input[type="file"] { display: none; }
