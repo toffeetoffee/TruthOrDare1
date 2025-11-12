@@ -46,11 +46,7 @@ def _broadcast_room_state(room_code, room):
         return
     _socketio.emit(
         "player_list",
-        {
-            "players": room.get_player_names(),
-            "host_sid": room.host_sid,
-            "host_name": room.get_host_name() if hasattr(room, "get_host_name") else (room.host.name if hasattr(room, "host") else None),
-        },
+        {"players": room.get_player_names(), "host_sid": room.host_sid},
         room=room_code,
     )
 
