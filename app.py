@@ -9,8 +9,7 @@ from Controller.socket_events import register_socket_events
 # -------------------------------------------------------------
 # Flask app and Socket.IO initialization
 # -------------------------------------------------------------
-app = Flask(__name__, template_folder='View/templates', static_folder='View/static')
-
+app = Flask(__name__, template_folder='View', static_folder='View/static')
 app.config['SECRET_KEY'] = 'prts-is-watching-you'
 
 # Create SocketIO instance
