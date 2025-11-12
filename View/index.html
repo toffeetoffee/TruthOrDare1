@@ -1,100 +1,80 @@
-<!doctype html>
-<html>
-<head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Truth or Dare - Home</title>
-  <style>
-    body {
-      font-family: system-ui, -apple-system, sans-serif;
-      padding: 40px;
-      max-width: 500px;
-      margin: 0 auto;
-    }
-    h1 {
-      text-align: center;
-      color: #333;
-    }
-    form {
-      margin-bottom: 24px;
-      padding: 20px;
-      border: 1px solid #ddd;
-      border-radius: 8px;
-      background: #f9f9f9;
-    }
-    label {
-      display: block;
-      margin-bottom: 8px;
-      font-weight: 500;
-    }
-    input {
-      width: 100%;
-      padding: 8px;
-      margin-bottom: 12px;
-      border: 1px solid #ccc;
-      border-radius: 4px;
-      box-sizing: border-box;
-      font-size: 14px;
-    }
-    button {
-      width: 100%;
-      padding: 10px;
-      background: #007bff;
-      color: white;
-      border: none;
-      border-radius: 4px;
-      font-size: 16px;
-      cursor: pointer;
-    }
-    button:hover {
-      background: #0056b3;
-    }
-    .note {
-      margin-top: 24px;
-      color: #666;
-      font-size: 14px;
-      text-align: center;
-    }
-  </style>
-</head>
-<body>
-  <h1>Truth or Dare</h1>
-  
-  <form action="/create" method="post">
-    <label>
-      Your Name:
-      <input name="name" placeholder="Enter your name" required />
-    </label>
-    <button type="submit">Create New Room</button>
-  </form>
-  <img src="/static/agnes.jpeg" alt="Truth or Dare Logo" style="display:block; margin: 0 auto 20px; max-width:150px;" onclick="enlargeImg()"
-            id="img1"/>
-  <form action="/join" method="post">
-    <label>
-      Your Name:
-      <input name="name" placeholder="Enter your name" required />
-    </label>
-    <label>
-      Room Code:
-      <input name="code" placeholder="ABC123" required />
-    </label>
-    <button type="submit">Join Room</button>
-  </form>
+{% extends "base.html" %}
+{% block title %}Home · Dare or Dare{% endblock %}
+{% block content %}
+<section class="container py-5">
+  <div class="row g-4 align-items-center">
+    <div class="col-12 col-lg-6">
+      <h1 class="display-5 fw-bold mb-3">Play Truth or Dare, anywhere.</h1>
+      <p class="lead">Create a room, invite friends, and let chaos (and points) ensue. No player limit, round-based fun, and optional mini-games.</p>
+      <div class="d-flex gap-2 mt-4">
+        <a class="btn btn-primary btn-lg" href="#createRoom" data-bs-toggle="modal">Create Room</a>
+        <a class="btn btn-outline-primary btn-lg" href="#joinRoom" data-bs-toggle="modal">Join Room</a>
+      </div>
+    </div>
+    <div class="col-12 col-lg-6">
+      <div class="card shadow-sm border-0">
+        <div class="card-body">
+          <h5 class="card-title">Features</h5>
+          <ul class="mb-0">
+            <li>Host controls &amp; flexible settings (timers, rounds, AI, mini-games)</li>
+            <li>Collaborative Truth/Dare list-building</li>
+            <li>Vote-to-skip and fairness-focused selection</li>
+            <li>Endscreen with Top 5 and full history</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
 
-  <p class="note"></p>
-  <br>
-  <button onclick="resetImg()">Reset</button>
-  <script>img = document.getElementById("img1");
-      
-        function enlargeImg() {
-            img.style.transform = "scale(5)";
-            img.style.transition = "transform 0.25s ease";
-        }
+<!-- Create Room Modal -->
+<div class="modal fade" id="createRoom" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">Create Room</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <form action="/create" method="POST" class="modal-body">
+        <div class="mb-3">
+          <label class="form-label">Your Name</label>
+          <input class="form-control" name="name" required maxlength="24" placeholder="e.g., Alex">
+        </div>
+        <div class="form-text">A unique 6-character room code will be generated.</div>
+        <div class="d-grid mt-3">
+          <button type="submit" class="btn btn-primary">Create</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
 
-      function resetImg() {
-            img.style.transform = "scale(1)";
-            img.style.transition = "transform 0.25s ease";
-        }
-      </script>
-</body>
-</html>
+<!-- Join Room Modal -->
+<div class="modal fade" id="joinRoom" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">Join Room</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <form action="/join" method="POST" class="modal-body">
+        <div class="mb-3">
+          <label class="form-label">Your Name</label>
+          <input class="form-control" name="name" required maxlength="24" placeholder="e.g., Jamie">
+        </div>
+        <div class="mb-3">
+          <label class="form-label">Room Code</label>
+          <input class="form-control text-uppercase" name="room" required minlength="6" maxlength="6" placeholder="ABC123">
+        </div>
+        <div class="d-grid">
+          <button type="submit" class="btn btn-primary">Join</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/main.js') }}"></script>
+{% endblock %}

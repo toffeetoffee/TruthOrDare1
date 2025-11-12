@@ -1,0 +1,5 @@
+.phase-panel { min-height: 160px; }
+#phasePanels .d-none { display: none !important; }
+#playerList .you { font-weight: 600; }
+#playerList .selected { background: rgba(13,110,253,.08); }
+#historyBody { max-height: 320px; overflow: auto; }
