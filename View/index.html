@@ -2,76 +2,225 @@
 <html lang="en" data-bs-theme="dark">
   <head>
     <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>Truth or Dare · Lobby</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet">
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">
-    <script>
-      // Theme bootstrapping
-      (function () {
-        const saved = localStorage.getItem('tod-theme');
-        if (saved) document.documentElement.setAttribute('data-bs-theme', saved);
-        else document.documentElement.setAttribute('data-bs-theme', 'dark');
-      })();
-    </script>
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>Truth or Dare – Home</title>
+
+    <!-- Bootstrap 5.3 -->
+    <link
+      href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css"
+      rel="stylesheet"
+    />
+
+    <style>
+      body {
+        min-height: 100vh;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 1.5rem;
+        font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI",
+          sans-serif;
+      }
+
+      .td-brand-badge {
+        font-size: 0.8rem;
+        text-transform: uppercase;
+        letter-spacing: 0.12em;
+        opacity: 0.7;
+      }
+
+      .td-card {
+        border-radius: 1rem;
+      }
+
+      .td-card-illustration {
+        font-size: 3rem;
+      }
+
+      .form-label {
+        font-weight: 500;
+      }
+
+      .td-room-code-example {
+        font-family: "SF Mono", Menlo, Monaco, Consolas, "Liberation Mono",
+          "Courier New", monospace;
+      }
+    </style>
   </head>
-  <body class="min-vh-100 d-flex align-items-center py-5">
-    <main class="container">
+  <body class="bg-body text-body">
+    <div class="container">
       <div class="row justify-content-center">
-        <div class="col-lg-8 col-xl-6">
-          <div class="text-center mb-4">
-            <h1 class="fw-bold display-5">Truth or Dare</h1>
-            <p class="text-secondary mb-0">Create a room or join an existing one</p>
-          </div>
+        <div class="col-lg-8 col-xl-7">
+          <div class="card shadow-lg border-0 td-card">
+            <div class="card-body p-4 p-md-5">
+              <div class="d-flex justify-content-between align-items-start mb-4">
+                <div>
+                  <div class="td-brand-badge mb-1 text-secondary">
+                    Real-time party game
+                  </div>
+                  <h1 class="h3 mb-0">Truth or Dare</h1>
+                  <p class="text-secondary small mb-0 mt-1">
+                    Create a room, share the code, and play together in the
+                    browser.
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  class="btn btn-outline-light btn-sm d-flex align-items-center gap-2"
+                  id="theme-toggle"
+                  aria-label="Toggle color mode"
+                >
+                  <span class="bi bi-moon"></span>
+                  <span class="td-theme-label">Light mode</span>
+                </button>
+              </div>
 
-          <div class="card shadow-lg border-0 rounded-4 mb-4">
-            <div class="card-body p-4">
-              <form action="/create" method="post" class="row g-3">
-                <div class="col-12">
-                  <label class="form-label" for="create-name">Your name</label>
-                  <input class="form-control form-control-lg" id="create-name" name="name" placeholder="Alex" required>
+              <div class="row g-4">
+                <!-- Create Room -->
+                <div class="col-md-6">
+                  <div class="border rounded-3 p-3 h-100">
+                    <div class="d-flex align-items-center mb-3">
+                      <div class="td-card-illustration me-2">🎲</div>
+                      <div>
+                        <h2 class="h5 mb-1">Create a new room</h2>
+                        <p class="small text-secondary mb-0">
+                          You’ll become the host and get a 6-character room
+                          code.
+                        </p>
+                      </div>
+                    </div>
+
+                    <form action="/create" method="post" class="mt-3">
+                      <div class="mb-3">
+                        <label for="create-name" class="form-label"
+                          >Your name</label
+                        >
+                        <input
+                          id="create-name"
+                          name="name"
+                          type="text"
+                          class="form-control"
+                          placeholder="Enter your name"
+                          required
+                        />
+                      </div>
+                      <button
+                        type="submit"
+                        class="btn btn-primary w-100"
+                      >
+                        Create room
+                      </button>
+                    </form>
+                  </div>
                 </div>
-                <div class="col-12 d-grid">
-                  <button class="btn btn-primary btn-lg rounded-3" type="submit">
-                    <i class="bi bi-plus-circle me-2"></i>Create New Room
-                  </button>
+
+                <!-- Join Room -->
+                <div class="col-md-6">
+                  <div class="border rounded-3 p-3 h-100">
+                    <div class="d-flex align-items-center mb-3">
+                      <div class="td-card-illustration me-2">🎟️</div>
+                      <div>
+                        <h2 class="h5 mb-1">Join a room</h2>
+                        <p class="small text-secondary mb-0">
+                          Enter the room code your friend shared with you.
+                        </p>
+                      </div>
+                    </div>
+
+                    <form action="/join" method="post" class="mt-3">
+                      <div class="mb-3">
+                        <label for="join-name" class="form-label"
+                          >Your name</label
+                        >
+                        <input
+                          id="join-name"
+                          name="name"
+                          type="text"
+                          class="form-control"
+                          placeholder="Enter your name"
+                          required
+                        />
+                      </div>
+
+                      <div class="mb-3">
+                        <label for="join-code" class="form-label"
+                          >Room code</label
+                        >
+                        <input
+                          id="join-code"
+                          name="code"
+                          type="text"
+                          class="form-control text-uppercase td-room-code-example"
+                          placeholder="ABC123"
+                          maxlength="6"
+                          required
+                        />
+                        <div class="form-text">
+                          Exactly 6 letters/numbers (not case-sensitive).
+                        </div>
+                      </div>
+
+                      <button
+                        type="submit"
+                        class="btn btn-success w-100"
+                      >
+                        Join room
+                      </button>
+                    </form>
+                  </div>
                 </div>
-              </form>
+              </div>
+
+              <hr class="my-4" />
+              <p class="text-center text-secondary small mb-0">
+                Rooms are automatically cleaned up when everyone leaves.
+              </p>
             </div>
-          </div>
-
-          <div class="card shadow-lg border-0 rounded-4">
-            <div class="card-body p-4">
-              <form action="/join" method="post" class="row g-3">
-                <div class="col-12">
-                  <label class="form-label" for="join-name">Your name</label>
-                  <input class="form-control form-control-lg" id="join-name" name="name" placeholder="Taylor" required>
-                </div>
-                <div class="col-12">
-                  <label class="form-label" for="join-code">Room code</label>
-                  <input class="form-control form-control-lg text-uppercase" id="join-code" name="code" placeholder="ABC123" minlength="6" maxlength="6" required>
-                </div>
-                <div class="col-12 d-grid">
-                  <button class="btn btn-success btn-lg rounded-3" type="submit">
-                    <i class="bi bi-door-open me-2"></i>Join Room
-                  </button>
-                </div>
-              </form>
-            </div>
-          </div>
-
-          <div class="d-flex justify-content-between align-items-center mt-4">
-            <button id="theme-toggle" class="btn btn-outline-secondary rounded-3">
-              <i class="bi bi-moon-stars"></i> <span class="ms-2">Toggle theme</span>
-            </button>
-            <small class="text-secondary">Built with Bootstrap 5 · Vanilla JS</small>
           </div>
         </div>
       </div>
-    </main>
+    </div>
 
+    <!-- Bootstrap bundle (optional, for future components) -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
-    <script src="{{ url_for('static', filename='js/main.js') }}"></script>
+
+    <!-- Theme toggle (shared logic with room.html) -->
+    <script>
+      (function () {
+        const stored = localStorage.getItem("td-theme");
+        const prefersDark =
+          window.matchMedia &&
+          window.matchMedia("(prefers-color-scheme: dark)").matches;
+        const initial = stored || (prefersDark ? "dark" : "dark");
+
+        document.documentElement.setAttribute("data-bs-theme", initial);
+
+        function updateToggle(mode) {
+          const btn = document.getElementById("theme-toggle");
+          if (!btn) return;
+          const label = btn.querySelector(".td-theme-label");
+          if (mode === "dark") {
+            if (label) label.textContent = "Light mode";
+          } else {
+            if (label) label.textContent = "Dark mode";
+          }
+        }
+
+        document.addEventListener("DOMContentLoaded", function () {
+          updateToggle(initial);
+          const btn = document.getElementById("theme-toggle");
+          if (!btn) return;
+          btn.addEventListener("click", function () {
+            const current =
+              document.documentElement.getAttribute("data-bs-theme") ||
+              "dark";
+            const next = current === "dark" ? "light" : "dark";
+            document.documentElement.setAttribute("data-bs-theme", next);
+            localStorage.setItem("td-theme", next);
+            updateToggle(next);
+          });
+        });
+      })();
+    </script>
   </body>
 </html>
