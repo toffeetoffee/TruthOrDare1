@@ -1,356 +1,242 @@
 <!doctype html>
-<html>
+<html lang="en" data-bs-theme="dark">
   <head>
     <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>Room {{ room_code }}</title>
-    <link rel="stylesheet" href="{{ url_for('static', filename='room_styles.css') }}">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">
+    <script>
+      (function () {
+        const saved = localStorage.getItem('tod-theme');
+        if (saved) document.documentElement.setAttribute('data-bs-theme', saved);
+        else document.documentElement.setAttribute('data-bs-theme', 'dark');
+      })();
+    </script>
   </head>
-  <body>
-    <h1>Dare or Dare</h1>
-    <div class="room-info">
-      <div>Room Code</div>
-      <div class="room-code">{{ room_code }}</div>
-      <div style="margin-top: 12px; color: #666;">Share this code with your friends!</div>
-    </div>
-
-    <!-- Lobby Section -->
-    <div id="lobby-section" class="lobby-section">
-      <div class="players-section">
-        <h2>Players in Room</h2>
-        <ul id="player-list" class="player-list">
-          <li class="player-item">Waiting for players...</li>
-        </ul>
-        <div id="player-count" class="player-count"></div>
-      </div>
-      <div class="button-group">
-        <button class="btn-leave" onclick="leaveRoom()">Leave Room</button>
-      </div>
-      <div id="host-controls" class="host-controls">
-        <div class="button-group">
-          <button class="btn-settings" onclick="openSettings()">Settings</button>
-          <button id="start-button" class="btn-start" onclick="startGame()">Start Game</button>
-        </div>
-        <div class="button-group">
-          <button class="btn-destroy" onclick="destroyRoom()">Destroy Room</button>
-        </div>
-      </div>
-    </div>
-
-  <!-- Settings Modal -->
-  <div id="settings-modal" class="modal">
-    <div class="modal-content">
-      <div class="modal-header">Game Settings</div>
-      
-      <!-- Preset Controls (above tabs) -->
-      <div class="preset-controls-global">
-        <div class="preset-info">Save or load a preset file containing both truths and dares</div>
-        <div class="preset-buttons">
-          <button class="btn-save-preset" onclick="savePreset()">💾 Save Preset (Both Lists)</button>
-          <button class="btn-load-preset" onclick="triggerLoadPreset()">📁 Load Preset (Both Lists)</button>
-          <input type="file" id="load-preset-file" accept=".json" style="display: none;" onchange="loadPresetFile(event)">
-        </div>
-      </div>
-      
-      <!-- Settings Tabs -->
-      <div class="settings-tabs">
-        <button class="settings-tab active" onclick="showSettingsTab('game')">Game Settings</button>
-        <button class="settings-tab" onclick="showSettingsTab('truths')">Default Truths</button>
-        <button class="settings-tab" onclick="showSettingsTab('dares')">Default Dares</button>
-      </div>
-      
-      <!-- Game Settings Tab -->
-      <div id="settings-tab-game" class="settings-tab-content active">
-        <div class="settings-group">
-          <label class="settings-label">Countdown Duration (seconds)</label>
-          <input type="number" id="setting-countdown" class="settings-input" min="3" max="30" value="10">
-          <div class="settings-hint">Time before game starts (3-30 seconds)</div>
-        </div>
-        
-        <div class="settings-group">
-          <label class="settings-label">Preparation Duration (seconds)</label>
-          <input type="number" id="setting-preparation" class="settings-input" min="10" max="120" value="30">
-          <div class="settings-hint">Time to submit truths/dares (10-120 seconds)</div>
-        </div>
-        
-        <div class="settings-group">
-          <label class="settings-label">Selection Duration (seconds)</label>
-          <input type="number" id="setting-selection" class="settings-input" min="5" max="30" value="10">
-          <div class="settings-hint">Time for player to choose truth/dare (5-30 seconds)</div>
-        </div>
-        
-        <div class="settings-group">
-          <label class="settings-label">Truth/Dare Duration (seconds)</label>
-          <input type="number" id="setting-truthdare" class="settings-input" min="30" max="180" value="60">
-          <div class="settings-hint">Time to perform challenge (30-180 seconds)</div>
-        </div>
-        
-        <div class="settings-group">
-          <label class="settings-label">Skip Duration (seconds)</label>
-          <input type="number" id="setting-skip" class="settings-input" min="3" max="30" value="5">
-          <div class="settings-hint">Time remaining after vote skip (3-30 seconds)</div>
-        </div>
-        
-        <div class="settings-group">
-          <label class="settings-label">Maximum Rounds</label>
-          <input type="number" id="setting-maxrounds" class="settings-input" min="1" max="50" value="10">
-          <div class="settings-hint">Number of rounds before game ends (1-50)</div>
-        </div>
-        
-        <div class="settings-group">
-          <label class="settings-label">Minigame Chance (%)</label>
-          <input type="number" id="setting-minigame" class="settings-input" min="0" max="100" value="20">
-          <div class="settings-hint">Chance of triggering a minigame (0-100%)</div>
-        </div>
-        
-        <div class="settings-group">
-          <label class="settings-label">
-            <input type="checkbox" id="setting-ai-generation" style="width: auto; margin-right: 8px;">
-            AI-Powered Generation
-          </label>
-          <div class="settings-hint">Automatically generate new truths/dares using AI when a player runs out (requires Gemini API key)</div>
-        </div>
-      </div>
-      
-      <!-- Default Truths Tab -->
-      <div id="settings-tab-truths" class="settings-tab-content">
-        <div class="list-controls">
-          <button class="btn-add" onclick="addDefaultItem('truth')">+ Add Truth</button>
-          <button class="btn-edit" onclick="editDefaultItem('truth')">Edit Selected</button>
-          <button class="btn-remove" onclick="removeDefaultItems('truth')">Remove Selected</button>
-        </div>
-        
-        <div class="default-list" id="default-truths-list">
-          <!-- Populated dynamically -->
-        </div>
-        
-        <div class="list-controls">
-          <button class="btn-select-all" onclick="selectAllItems('truth')">Select All</button>
-          <button class="btn-deselect-all" onclick="deselectAllItems('truth')">Deselect All</button>
-        </div>
-      </div>
-      
-      <!-- Default Dares Tab -->
-      <div id="settings-tab-dares" class="settings-tab-content">
-        <div class="list-controls">
-          <button class="btn-add" onclick="addDefaultItem('dare')">+ Add Dare</button>
-          <button class="btn-edit" onclick="editDefaultItem('dare')">Edit Selected</button>
-          <button class="btn-remove" onclick="removeDefaultItems('dare')">Remove Selected</button>
-        </div>
-        
-        <div class="default-list" id="default-dares-list">
-          <!-- Populated dynamically -->
-        </div>
-        
-        <div class="list-controls">
-          <button class="btn-select-all" onclick="selectAllItems('dare')">Select All</button>
-          <button class="btn-deselect-all" onclick="deselectAllItems('dare')">Deselect All</button>
-        </div>
-      </div>
-      
-      <div class="modal-buttons">
-        <button class="btn-save" onclick="saveSettings()">Save & Close</button>
-        <button class="btn-cancel" onclick="closeSettings()">Close</button>
-      </div>
-    </div>
-  </div>
-
-  <!-- Game Area -->
-  <div id="game-area" class="game-area">
-    <!-- Leave button always visible during game -->
-    <div class="game-leave-button">
-      <button class="btn-leave" onclick="leaveRoom()">Leave Room</button>
-    </div>
-    
-    <!-- Countdown -->
-    <div id="countdown-section" style="display: none;">
-      <div class="countdown">
-        <div>Game Starting In</div>
-        <div id="countdown-timer" class="countdown-timer">10</div>
-      </div>
-    </div>
-
-    <!-- Preparation Phase -->
-    <div id="preparation-section" style="display: none;">
-      <div class="preparation-phase">
-        <div class="phase-timer">
-          Preparation Phase: <span id="prep-timer">30</span>s
-        </div>
-        
-        <div class="submission-form">
-          <textarea id="truth-dare-text" placeholder="Enter a truth question or dare challenge..."></textarea>
-          
-          <select id="truth-dare-type">
-            <option value="truth">Truth</option>
-            <option value="dare">Dare</option>
-          </select>
-          
-          <div style="margin-top: 8px; font-weight: 500;">Add to players:</div>
-          <div id="player-checkboxes" class="player-checkboxes">
-            <div style="color: #999; text-align: center;">No other players yet</div>
-          </div>
-          
-          <div class="checkbox-controls">
-            <button onclick="selectAllPlayers()">Select All</button>
-            <button onclick="deselectAllPlayers()">Deselect All</button>
-          </div>
-          
-          <button onclick="submitTruthDare()">Submit</button>
-          
-          <div id="submission-success" class="submission-success"></div>
-        </div>
-      </div>
-    </div>
-
-    <!-- Selection Phase -->
-    <div id="selection-section" style="display: none;">
-      <div class="selection-phase">
-        <div class="selection-title">Selected Player</div>
-        <div class="selected-player-display" id="selected-player-name">
-          ???
-        </div>
-        <div class="selection-timer">
-          Time remaining: <span id="selection-timer">10</span>s
-        </div>
-        
-        <!-- Truth or Dare choice buttons (only for selected player) -->
-        <div id="truth-dare-choice" class="truth-dare-buttons" style="display: none;">
-          <button class="btn-truth" onclick="selectTruthDare('truth')">Truth</button>
-          <button class="btn-dare" onclick="selectTruthDare('dare')">Dare</button>
-        </div>
-        
-        <div id="choice-made" style="margin-top: 20px; font-size: 18px; color: #666; text-align: center; display: none;">
-          Choice: <span id="choice-display"></span>
-        </div>
-      </div>
-    </div>
-
-    <!-- Minigame Phase -->
-    <div id="minigame-section" style="display: none;">
-      <div class="minigame-phase">
-        <div class="minigame-title">🎮 Staring Contest! 🎮</div>
-        
-        <div class="minigame-description">
-          Who will blink first?
-        </div>
-        
-        <div class="minigame-participants">
-          <div class="participant-card">
-            <div class="participant-name" id="participant-1">Player 1</div>
-            <div class="participant-votes" id="participant-1-votes">0 votes</div>
-          </div>
-          <div class="vs-text">VS</div>
-          <div class="participant-card">
-            <div class="participant-name" id="participant-2">Player 2</div>
-            <div class="participant-votes" id="participant-2-votes">0 votes</div>
-          </div>
-        </div>
-        
-        <!-- Voting buttons (only for non-participants) -->
-        <div id="minigame-voting" class="minigame-voting" style="display: none;">
-          <div class="voting-instruction">Vote for the loser!</div>
-          <div class="voting-buttons">
-            <button class="vote-btn" id="vote-btn-1" onclick="voteMinigame(null)">
-              <span id="vote-name-1">Player 1</span> lose!
-            </button>
-            <button class="vote-btn" id="vote-btn-2" onclick="voteMinigame(null)">
-              <span id="vote-name-2">Player 2</span> lose!
-            </button>
-          </div>
-          <div class="vote-progress">
-            Votes: <span id="minigame-vote-count">0</span> / <span id="minigame-required-votes">?</span>
-          </div>
-        </div>
-        
-        <!-- For participants -->
-        <div id="minigame-participant-message" class="minigame-participant-message" style="display: none;">
-          <p>You are competing!</p>
-          <p>Other players will vote for who lose!</p>
-        </div>
-      </div>
-    </div>
-
-    <!-- Truth/Dare Phase -->
-    <div id="truth-dare-section" style="display: none;">
-      <div class="truth-dare-phase">
-        <!-- Empty List Warning Banner -->
-        <div id="empty-list-banner" class="empty-list-banner" style="display: none;">
-          <div class="banner-icon">⚠️</div>
-          <div class="banner-content">
-            <div class="banner-title">List Empty!</div>
-            <div class="banner-message">The selected player has run out of available challenges. Skip has been automatically activated.</div>
-          </div>
-        </div>
-        
-        <div class="phase-header">
-          <div class="phase-type" id="phase-type">DARE</div>
-          <div class="performing-player">
-            <span id="performing-player-name">Alice</span> is performing
-          </div>
-        </div>
-        
-        <div class="challenge-text" id="challenge-text">
-          Do 10 pushups
-        </div>
-        
-        <div class="phase-timer-large">
-          Time: <span id="truth-dare-timer">60</span>s
-        </div>
-        
-        <!-- Vote section (only for non-selected players) -->
-        <div id="vote-section" class="vote-section" style="display: none;">
-          <button id="vote-skip-button" class="vote-button" onclick="voteSkip()">
-            Vote to Skip
+  <body class="min-vh-100 d-flex flex-column">
+    <nav class="navbar navbar-expand-lg border-bottom">
+      <div class="container">
+        <a class="navbar-brand fw-bold" href="/"><i class="bi bi-cup-hot me-2"></i>Truth or Dare</a>
+        <div class="ms-auto d-flex gap-2">
+          <span class="badge text-bg-primary">Room <span class="font-monospace">{{ room_code }}</span></span>
+          <button id="theme-toggle" class="btn btn-outline-secondary btn-sm rounded-3">
+            <i class="bi bi-moon-stars"></i>
           </button>
-          <div class="vote-count">
-            <span id="vote-count">0</span> / <span id="required-votes">?</span> votes to skip
+          <button id="leave-btn" class="btn btn-outline-danger btn-sm rounded-3">
+            <i class="bi bi-box-arrow-left me-1"></i>Leave
+          </button>
+        </div>
+      </div>
+    </nav>
+
+    <main class="container flex-fill py-4">
+      <div class="row g-4">
+        <!-- Left: Players -->
+        <div class="col-lg-4">
+          <div class="card h-100 rounded-4 shadow-sm">
+            <div class="card-header d-flex justify-content-between align-items-center">
+              <div class="fw-semibold"><i class="bi bi-people me-2"></i>Players</div>
+              <span id="player-count" class="badge text-bg-secondary">0</span>
+            </div>
+            <div class="card-body">
+              <ul id="player-list" class="list-group list-group-flush small"></ul>
+              <div class="mt-3" id="host-controls" hidden>
+                <div class="d-grid gap-2">
+                  <button id="start-button" class="btn btn-primary rounded-3">
+                    <i class="bi bi-play-circle me-2"></i>Start Game
+                  </button>
+                  <button id="restart-button" class="btn btn-warning rounded-3">
+                    <i class="bi bi-arrow-counterclockwise me-2"></i>Restart
+                  </button>
+                  <button id="destroy-button" class="btn btn-outline-danger rounded-3">
+                    <i class="bi bi-trash3 me-2"></i>Destroy Room
+                  </button>
+                </div>
+                <div class="mt-3 d-grid">
+                  <button class="btn btn-outline-secondary rounded-3" data-bs-toggle="modal" data-bs-target="#settingsModal">
+                    <i class="bi bi-sliders me-2"></i>Settings
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Right: Game Area -->
+        <div class="col-lg-8">
+          <div class="card rounded-4 shadow-sm">
+            <div class="card-body p-4">
+              <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
+                <div>
+                  <div class="fw-bold text-uppercase small text-secondary">Phase</div>
+                  <div id="phase-label" class="fs-4">Lobby</div>
+                </div>
+                <div class="text-end">
+                  <div class="fw-bold text-uppercase small text-secondary">Time Left</div>
+                  <div id="timer" class="display-6 font-monospace">--</div>
+                </div>
+              </div>
+
+              <hr>
+
+              <div id="phase-panels">
+                <!-- Lobby info -->
+                <div id="panel-lobby" class="phase-panel">
+                  <p class="text-secondary mb-0">Waiting for players. The host can start the game when ready.</p>
+                </div>
+
+                <!-- Preparation: submit truths/dares -->
+                <div id="panel-preparation" class="phase-panel d-none">
+                  <div class="row g-3">
+                    <div class="col-md-6">
+                      <label class="form-label">Submit new items</label>
+                      <textarea id="submission-text" class="form-control" rows="4" placeholder="Write up to 3 lines; each line is one item"></textarea>
+                      <div class="form-text">You’ll earn 10 points for each submission (max 3).</div>
+                    </div>
+                    <div class="col-md-6">
+                      <label class="form-label">Send to players</label>
+                      <div id="player-checkboxes" class="row g-2"></div>
+                      <div class="d-flex gap-2 mt-3">
+                        <button id="submit-truth" class="btn btn-outline-info rounded-3 flex-fill"><i class="bi bi-chat-quote me-1"></i>Submit Truths</button>
+                        <button id="submit-dare" class="btn btn-outline-danger rounded-3 flex-fill"><i class="bi bi-lightning-charge me-1"></i>Submit Dares</button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Selection / Minigame -->
+                <div id="panel-selection" class="phase-panel d-none">
+                  <div class="alert alert-info rounded-3"><i class="bi bi-dice-5-fill me-2"></i>Picking a player or starting a minigame…</div>
+                  <div class="d-grid">
+                    <button id="minigame-vote" class="btn btn-outline-primary rounded-3"><i class="bi bi-controller me-2"></i>Participate</button>
+                  </div>
+                </div>
+
+                <!-- Truth/Dare -->
+                <div id="panel-truthdare" class="phase-panel d-none">
+                  <div class="row g-3">
+                    <div class="col-12">
+                      <div id="selected-player" class="lead"></div>
+                      <div class="d-flex gap-2 mt-2">
+                        <button class="btn btn-outline-info rounded-3" id="choose-truth"><i class="bi bi-chat-quote me-2"></i>Truth</button>
+                        <button class="btn btn-outline-danger rounded-3" id="choose-dare"><i class="bi bi-lightning-charge me-2"></i>Dare</button>
+                        <button class="btn btn-outline-secondary rounded-3 ms-auto" id="vote-skip"><i class="bi bi-skip-forward me-2"></i>Vote Skip</button>
+                      </div>
+                    </div>
+                    <div class="col-12">
+                      <div id="current-prompt" class="fs-4 mt-3"></div>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- End -->
+                <div id="panel-end" class="phase-panel d-none">
+                  <h5 class="mb-3">Game Over</h5>
+                  <div id="scoreboard"></div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </main>
+
+    <!-- Settings Modal -->
+    <div class="modal fade" id="settingsModal" tabindex="-1" aria-hidden="true">
+      <div class="modal-dialog modal-lg modal-dialog-centered">
+        <div class="modal-content rounded-4">
+          <div class="modal-header">
+            <h5 class="modal-title"><i class="bi bi-sliders me-2"></i>Game Settings</h5>
+            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+          </div>
+          <div class="modal-body">
+            <form id="settings-form" class="row g-3">
+              <div class="col-md-4">
+                <label class="form-label">Countdown (3–30s)</label>
+                <input type="number" class="form-control" id="setting-countdown" min="3" max="30" value="10">
+              </div>
+              <div class="col-md-4">
+                <label class="form-label">Preparation (10–120s)</label>
+                <input type="number" class="form-control" id="setting-preparation" min="10" max="120" value="30">
+              </div>
+              <div class="col-md-4">
+                <label class="form-label">Selection (5–30s)</label>
+                <input type="number" class="form-control" id="setting-selection" min="5" max="30" value="10">
+              </div>
+              <div class="col-md-4">
+                <label class="form-label">Truth/Dare (30–180s)</label>
+                <input type="number" class="form-control" id="setting-truthdare" min="30" max="180" value="60">
+              </div>
+              <div class="col-md-4">
+                <label class="form-label">Skip (3–30s)</label>
+                <input type="number" class="form-control" id="setting-skip" min="3" max="30" value="5">
+              </div>
+              <div class="col-md-4">
+                <label class="form-label">Max Rounds (1–50)</label>
+                <input type="number" class="form-control" id="setting-maxrounds" min="1" max="50" value="10">
+              </div>
+              <div class="col-md-6">
+                <label class="form-label">Minigame chance (0–100%)</label>
+                <input type="number" class="form-range w-100" id="setting-minigame" min="0" max="100" value="20">
+              </div>
+              <div class="col-md-6 d-flex align-items-end">
+                <div class="form-check form-switch">
+                  <input class="form-check-input" type="checkbox" id="setting-ai-generation">
+                  <label class="form-check-label" for="setting-ai-generation">Enable AI content generation</label>
+                </div>
+              </div>
+            </form>
+
+            <hr class="my-4" />
+
+            <div class="row g-3 align-items-center">
+              <div class="col-lg-6">
+                <h6 class="mb-2">Default Truths & Dares</h6>
+                <div class="d-flex flex-wrap gap-2">
+                  <button id="add-default-truth" class="btn btn-outline-info btn-sm rounded-3"><i class="bi bi-plus-circle me-1"></i>Add Truth</button>
+                  <button id="add-default-dare" class="btn btn-outline-danger btn-sm rounded-3"><i class="bi bi-plus-circle me-1"></i>Add Dare</button>
+                  <button id="remove-default-truths" class="btn btn-outline-secondary btn-sm rounded-3"><i class="bi bi-x-circle me-1"></i>Clear Truths</button>
+                  <button id="remove-default-dares" class="btn btn-outline-secondary btn-sm rounded-3"><i class="bi bi-x-circle me-1"></i>Clear Dares</button>
+                </div>
+              </div>
+              <div class="col-lg-6">
+                <h6 class="mb-2">Presets</h6>
+                <div class="d-flex flex-wrap gap-2">
+                  <button id="save-preset" class="btn btn-outline-success btn-sm rounded-3"><i class="bi bi-download me-1"></i>Save preset</button>
+                  <label class="btn btn-outline-primary btn-sm rounded-3 mb-0">
+                    <i class="bi bi-upload me-1"></i>Load preset
+                    <input type="file" id="load-preset-file" accept="application/json" hidden>
+                  </label>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="modal-footer">
+            <button class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+            <button id="save-settings" class="btn btn-primary">Save</button>
           </div>
         </div>
       </div>
     </div>
 
-    <!-- End Game Phase -->
-    <div id="end-game-section" style="display: none;">
-      <div class="end-game-section">
-        <div class="end-game-title">🎉 Game Over! 🎉</div>
-        
-        <!-- Scoreboard -->
-        <div class="scoreboard">
-          <div class="scoreboard-title">Top Players</div>
-          <div id="top-players-list">
-            <!-- Dynamically populated -->
-          </div>
-        </div>
-        
-        <!-- Round History -->
-        <div class="round-history">
-          <div class="round-history-title">Round History</div>
-          <div id="round-history-list">
-            <!-- Dynamically populated -->
-          </div>
-        </div>
-        
-        <!-- Controls (host only) -->
-        <div id="end-game-host-controls" style="display: none;">
-          <div class="end-game-controls">
-            <button class="btn-settings" onclick="openSettings()">Settings</button>
-            <button class="btn-restart" onclick="restartGame()">Restart Game</button>
-          </div>
-        </div>
-        
-        <div class="button-group" style="margin-top: 20px;">
-          <button class="btn-leave" onclick="leaveRoom()">Leave Room</button>
+    <!-- Toasts -->
+    <div class="toast-container position-fixed bottom-0 end-0 p-3">
+      <div id="mainToast" class="toast align-items-center" role="alert" aria-live="assertive" aria-atomic="true">
+        <div class="d-flex">
+          <div class="toast-body" id="toast-body">Ready.</div>
+          <button type="button" class="btn-close me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
         </div>
       </div>
     </div>
-  </div>
 
     <script src="https://cdn.socket.io/4.6.1/socket.io.min.js" crossorigin="anonymous"></script>
     <script>
-      // Pass template variables to JavaScript
       const ROOM_CODE = '{{ room_code }}';
       const PLAYER_NAME = '{{ name }}';
     </script>
-    <script src="{{ url_for('static', filename='room_script.js') }}"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="{{ url_for('static', filename='js/room.js') }}"></script>
   </body>
 </html>

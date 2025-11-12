@@ -1,100 +1,77 @@
 <!doctype html>
-<html>
-<head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Truth or Dare - Home</title>
-  <style>
-    body {
-      font-family: system-ui, -apple-system, sans-serif;
-      padding: 40px;
-      max-width: 500px;
-      margin: 0 auto;
-    }
-    h1 {
-      text-align: center;
-      color: #333;
-    }
-    form {
-      margin-bottom: 24px;
-      padding: 20px;
-      border: 1px solid #ddd;
-      border-radius: 8px;
-      background: #f9f9f9;
-    }
-    label {
-      display: block;
-      margin-bottom: 8px;
-      font-weight: 500;
-    }
-    input {
-      width: 100%;
-      padding: 8px;
-      margin-bottom: 12px;
-      border: 1px solid #ccc;
-      border-radius: 4px;
-      box-sizing: border-box;
-      font-size: 14px;
-    }
-    button {
-      width: 100%;
-      padding: 10px;
-      background: #007bff;
-      color: white;
-      border: none;
-      border-radius: 4px;
-      font-size: 16px;
-      cursor: pointer;
-    }
-    button:hover {
-      background: #0056b3;
-    }
-    .note {
-      margin-top: 24px;
-      color: #666;
-      font-size: 14px;
-      text-align: center;
-    }
-  </style>
-</head>
-<body>
-  <h1>Truth or Dare</h1>
-  
-  <form action="/create" method="post">
-    <label>
-      Your Name:
-      <input name="name" placeholder="Enter your name" required />
-    </label>
-    <button type="submit">Create New Room</button>
-  </form>
-  <img src="/static/agnes.jpeg" alt="Truth or Dare Logo" style="display:block; margin: 0 auto 20px; max-width:150px;" onclick="enlargeImg()"
-            id="img1"/>
-  <form action="/join" method="post">
-    <label>
-      Your Name:
-      <input name="name" placeholder="Enter your name" required />
-    </label>
-    <label>
-      Room Code:
-      <input name="code" placeholder="ABC123" required />
-    </label>
-    <button type="submit">Join Room</button>
-  </form>
+<html lang="en" data-bs-theme="dark">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Truth or Dare · Lobby</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">
+    <script>
+      // Theme bootstrapping
+      (function () {
+        const saved = localStorage.getItem('tod-theme');
+        if (saved) document.documentElement.setAttribute('data-bs-theme', saved);
+        else document.documentElement.setAttribute('data-bs-theme', 'dark');
+      })();
+    </script>
+  </head>
+  <body class="min-vh-100 d-flex align-items-center py-5">
+    <main class="container">
+      <div class="row justify-content-center">
+        <div class="col-lg-8 col-xl-6">
+          <div class="text-center mb-4">
+            <h1 class="fw-bold display-5">Truth or Dare</h1>
+            <p class="text-secondary mb-0">Create a room or join an existing one</p>
+          </div>
 
-  <p class="note"></p>
-  <br>
-  <button onclick="resetImg()">Reset</button>
-  <script>img = document.getElementById("img1");
-      
-        function enlargeImg() {
-            img.style.transform = "scale(5)";
-            img.style.transition = "transform 0.25s ease";
-        }
+          <div class="card shadow-lg border-0 rounded-4 mb-4">
+            <div class="card-body p-4">
+              <form action="/create" method="post" class="row g-3">
+                <div class="col-12">
+                  <label class="form-label" for="create-name">Your name</label>
+                  <input class="form-control form-control-lg" id="create-name" name="name" placeholder="Alex" required>
+                </div>
+                <div class="col-12 d-grid">
+                  <button class="btn btn-primary btn-lg rounded-3" type="submit">
+                    <i class="bi bi-plus-circle me-2"></i>Create New Room
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
 
-      function resetImg() {
-            img.style.transform = "scale(1)";
-            img.style.transition = "transform 0.25s ease";
-        }
-      </script>
-</body>
+          <div class="card shadow-lg border-0 rounded-4">
+            <div class="card-body p-4">
+              <form action="/join" method="post" class="row g-3">
+                <div class="col-12">
+                  <label class="form-label" for="join-name">Your name</label>
+                  <input class="form-control form-control-lg" id="join-name" name="name" placeholder="Taylor" required>
+                </div>
+                <div class="col-12">
+                  <label class="form-label" for="join-code">Room code</label>
+                  <input class="form-control form-control-lg text-uppercase" id="join-code" name="code" placeholder="ABC123" minlength="6" maxlength="6" required>
+                </div>
+                <div class="col-12 d-grid">
+                  <button class="btn btn-success btn-lg rounded-3" type="submit">
+                    <i class="bi bi-door-open me-2"></i>Join Room
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+
+          <div class="d-flex justify-content-between align-items-center mt-4">
+            <button id="theme-toggle" class="btn btn-outline-secondary rounded-3">
+              <i class="bi bi-moon-stars"></i> <span class="ms-2">Toggle theme</span>
+            </button>
+            <small class="text-secondary">Built with Bootstrap 5 · Vanilla JS</small>
+          </div>
+        </div>
+      </div>
+    </main>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="{{ url_for('static', filename='js/main.js') }}"></script>
+  </body>
 </html>

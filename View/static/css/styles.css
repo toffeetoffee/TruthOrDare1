@@ -1,0 +1,19 @@
+/* Shared styles */
+:root { --radius-2xl: 1.25rem; }
+.card { border-radius: var(--radius-2xl) !important; }
+.modal-content { border-radius: var(--radius-2xl) !important; }
+.btn { border-radius: .9rem; }
+.list-group-item { background: transparent; }
+
+/* Phase panels */
+.phase-panel.d-none { display: none !important; }
+
+/* Player checkboxes grid */
+#player-checkboxes .form-check { background: rgba(0,0,0,.03); border-radius: .75rem; padding: .5rem .75rem; }
+[data-bs-theme=light] #player-checkboxes .form-check { background: rgba(0,0,0,.04); }
+
+/* Timer */
+#timer { letter-spacing: .04em; }
+
+/* Toast */
+.toast { border-radius: .75rem; }
