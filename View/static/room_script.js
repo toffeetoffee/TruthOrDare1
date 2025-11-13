@@ -117,9 +117,9 @@ socket.on('player_list', (data) => {
 
   // Show host controls if this user is the host
   if (mySocketId === hostSocketId) {
-    hostControls.classList.add('d-none');
+    hostControls.classList.add('show');
   } else {
-    hostControls.classList.remove('d-none');
+    hostControls.classList.remove('show');
   }
 });
 
