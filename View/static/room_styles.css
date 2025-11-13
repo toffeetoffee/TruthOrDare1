@@ -7,16 +7,17 @@ body {
     sans-serif;
 }
 
-/* Always readable secondary text */
+/* Universal readable secondary text */
 .text-secondary,
 .small.text-secondary,
 .form-text,
 .round-submitter,
-.default-list-empty {
+.default-list-empty,
+.voting-instruction {
   color: var(--bs-secondary-color) !important;
 }
 
-/* Force readable body text */
+/* Force readable body text inside critical UI components */
 #challenge-text,
 #countdown-timer,
 #selection-timer,
@@ -28,14 +29,14 @@ body {
 /* Fix warning banner readability */
 #empty-list-banner {
   color: var(--bs-body-color) !important;
-  font-size: 0.8rem;
+  font-size: 0.85rem;
 }
 
 /* ----------------------------------------------------
    LOBBY + GAME LAYOUT
 ---------------------------------------------------- */
 
-/* Host controls hidden unless JS adds .show */
+/* Hide host controls unless JS adds class */
 .host-controls {
   display: none;
 }
@@ -43,28 +44,45 @@ body {
   display: block;
 }
 
-/* Hide entire left column when game begins */
+/* Hide entire lobby column */
 #lobby-section.hide {
   display: none !important;
 }
 
-/* Center the right/game column */
-.game-area {
-  display: none;
-}
-.game-area.show {
-  display: block;
-  margin: 0 auto;
-  max-width: 960px;
+/* Center game area inside its column */
+#game-area {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
 }
 
-/* Phase sections */
+/* Center game content */
+#game-area > * {
+  width: 100%;
+  max-width: 850px;
+}
+
+/* When lobby hidden, game column becomes centered */
+#lobby-section.hide + .col-lg-8 {
+  margin: 0 auto !important;
+  float: none !important;
+}
+
+/* Also ensure centeredness always */
+.game-area.show {
+  margin: 0 auto !important;
+  max-width: 900px;
+}
+
+/* Phase sections hover animation */
 .phase-section .card {
   border-radius: 1rem;
 }
+
 .phase-section .card-body {
   transition: background-color 0.2s ease, transform 0.15s ease;
 }
+
 .phase-section .card-body:hover {
   transform: translateY(-1px);
 }
@@ -77,13 +95,16 @@ body {
   max-height: 260px;
   overflow-y: auto;
 }
+
 #player-list .player-item {
   padding: 0.4rem 0;
   border: none;
 }
+
 #player-list .player-item.host {
   font-weight: 600;
 }
+
 #player-list .host-badge {
   margin-left: 0.25rem;
   font-size: 0.8rem;
@@ -101,6 +122,7 @@ body {
   border: 1px solid rgba(108, 117, 125, 0.25);
   padding: 0.4rem 0.6rem;
 }
+
 .player-checkbox-list .player-checkbox-item {
   display: flex;
   align-items: center;
@@ -130,7 +152,7 @@ body {
     border-color 0.2s ease;
 }
 
-/* Special styling when list empty (JS applies inline styles) */
+/* Special styling when list empty */
 #challenge-text.list-empty-warning {
   background: #fff3cd !important;
   color: #663c00 !important;
@@ -151,6 +173,7 @@ body {
   border-bottom: 1px dashed var(--bs-border-color);
   font-size: 0.85rem;
 }
+
 .round-item:last-child {
   border-bottom: none;
 }
@@ -159,9 +182,11 @@ body {
   font-weight: 600;
   margin-bottom: 0.2rem;
 }
+
 .round-player {
   font-weight: 500;
 }
+
 .round-challenge {
   font-style: italic;
   margin: 0.1rem 0 0.2rem 0;
@@ -179,6 +204,7 @@ body {
   border-bottom: 1px dashed var(--bs-border-color);
   font-size: 0.9rem;
 }
+
 #top-players-list .top-player:last-child {
   border-bottom: none;
 }
@@ -188,6 +214,7 @@ body {
   justify-content: space-between;
   gap: 0.75rem;
 }
+
 .top-player .player-score {
   font-weight: 600;
 }
@@ -201,7 +228,7 @@ body {
 }
 
 /* ----------------------------------------------------
-   SETTINGS MODAL
+   SETTINGS MODAL (MOBILE-SAFE)
 ---------------------------------------------------- */
 
 .td-settings-modal {
@@ -210,32 +237,57 @@ body {
   inset: 0;
   background: rgba(15, 23, 42, 0.6);
   z-index: 1055;
+  overflow-y: auto !important;
 }
 
+/* Scrollable & accessible modal */
 .td-settings-modal.show {
   display: flex;
-  align-items: center;
+  align-items: flex-start !important;
   justify-content: center;
-  padding: 1rem;
+  padding-top: 20px !important;
+}
+
+/* Dialog behaves responsively */
+.td-settings-modal .modal-dialog {
+  margin: 0 auto;
+  width: 100%;
+  max-width: 700px;
+}
+
+.td-settings-modal .modal-content {
+  max-height: calc(100vh - 40px);
+  overflow-y: auto;
+  border-radius: 1rem;
+}
+
+/* Short phone screens */
+@media (max-height: 650px) {
+  .td-settings-modal .modal-content {
+    max-height: 90vh;
+  }
 }
 
 /* Settings tabs */
 .settings-tab {
   cursor: pointer;
 }
+
 .settings-tab.active {
   color: var(--bs-nav-pills-link-active-color) !important;
   background-color: var(--bs-nav-pills-link-active-bg) !important;
 }
+
 .settings-tab-content {
   display: none;
 }
+
 .settings-tab-content.active {
   display: block;
 }
 
 /* ----------------------------------------------------
-   DEFAULT LISTS IN SETTINGS MODAL
+   DEFAULT LISTS IN SETTINGS
 ---------------------------------------------------- */
 
 .default-list {
@@ -276,10 +328,6 @@ body {
 
 #minigame-participant-message {
   font-size: 0.9rem;
-}
-
-.voting-instruction {
-  color: var(--bs-secondary-color) !important;
 }
 
 /* ----------------------------------------------------
