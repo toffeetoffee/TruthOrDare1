@@ -140,13 +140,6 @@
                   </button>
                   <button
                     type="button"
-                    class="btn btn-outline-warning btn-sm"
-                    onclick="restartGame()"
-                  >
-                    Restart game
-                  </button>
-                  <button
-                    type="button"
                     class="btn btn-outline-danger btn-sm"
                     onclick="destroyRoom()"
                   >
@@ -402,7 +395,7 @@
                   <p
                     class="small text-secondary mb-3 voting-instruction"
                   >
-                    Vote for who should lose this minigame.
+                    Vote for who lose this minigame.
                   </p>
 
                   <!-- Voting area -->
@@ -419,7 +412,7 @@
                           Player 1
                         </div>
                         <div class="small text-secondary mb-1">
-                          Vote for:
+                          The loser is:
                           <span
                             id="vote-name-1"
                             class="fw-semibold"
@@ -454,7 +447,7 @@
                           Player 2
                         </div>
                         <div class="small text-secondary mb-1">
-                          Vote for:
+                          The loser is:
                           <span
                             id="vote-name-2"
                             class="fw-semibold"
@@ -637,6 +630,13 @@
                         onclick="restartGame()"
                       >
                         Restart with same players
+                      </button>
+                      <button
+                        type="button"
+                        class="btn btn-outline-secondary btn-sm"
+                        onclick="openSettings()"
+                      >
+                        Game settings
                       </button>
                       <button
                         type="button"
