@@ -5,6 +5,12 @@ body {
     sans-serif;
 }
 
+#game-area {
+  margin-left: auto;
+  margin-right: auto;
+  max-width: 980px;
+}
+
 /* Lobby & game layout */
 .lobby-section {
   display: block;
@@ -50,10 +56,6 @@ body {
   overflow-y: auto;
 }
 
-#player-list li {
-  border: none;
-}
-
 /* Player checkbox list */
 .player-checkbox-list {
   max-height: 220px;
@@ -94,17 +96,17 @@ body {
   border-radius: 0.75rem;
 }
 
-/* Settings modal (custom; coexists with Bootstrap's modal styles) */
+/* Settings modal fix */
 .td-settings-modal {
   display: none;
   position: fixed;
   inset: 0;
-  background: rgba(15, 23, 42, 0.6);
+  background: rgba(15, 23, 42, 0.65);
   z-index: 1055;
 }
 
 .td-settings-modal.show {
-  display: flex;
+  display: flex !important;
   align-items: center;
   justify-content: center;
   padding: 1rem;
@@ -134,13 +136,6 @@ body {
   overflow-y: auto;
 }
 
-.default-list-empty {
-  text-align: center;
-  padding: 1rem;
-  font-style: italic;
-  color: var(--bs-secondary-color);
-}
-
 .default-list-item {
   display: flex;
   align-items: center;
@@ -148,9 +143,6 @@ body {
   gap: 0.5rem;
   padding: 0.4rem 0.5rem;
   border-radius: 0.5rem;
-  border: 1px solid transparent;
-  margin-bottom: 0.25rem;
-  cursor: pointer;
   background-color: var(--bs-tertiary-bg);
   transition: background-color 0.2s ease, border-color 0.2s ease;
 }
@@ -170,14 +162,10 @@ body {
   padding-top: 0.5rem;
 }
 
-/* Minigame */
-#minigame-voting .border {
+/* Minigame layout fixes */
+#minigame-section .border {
+  min-height: 135px;
   border-style: dashed !important;
-}
-
-/* Small helpers */
-.small text-secondary {
-  font-size: 0.85rem;
 }
 
 /* Responsive tweaks */

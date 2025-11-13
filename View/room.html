@@ -11,19 +11,17 @@
       rel="stylesheet"
     />
 
-    <!-- Room styles (overrides & custom layout) -->
     <link
       rel="stylesheet"
       href="{{ url_for('static', filename='room_styles.css') }}"
     />
   </head>
+
   <body class="bg-body text-body">
-    <!-- Top bar -->
+    <!-- NAVBAR -->
     <nav class="navbar navbar-expand-lg border-bottom mb-3 bg-body">
       <div class="container-fluid">
-        <span class="navbar-brand fw-semibold">
-          🎲 Truth or Dare
-        </span>
+        <span class="navbar-brand fw-semibold">🎲 Truth or Dare</span>
 
         <div class="d-none d-md-flex align-items-center gap-3 ms-auto me-3">
           <div class="small text-secondary text-nowrap">
@@ -46,6 +44,7 @@
           >
             <span class="td-theme-label">Light mode</span>
           </button>
+
           <button
             type="button"
             class="btn btn-outline-danger btn-sm"
@@ -57,18 +56,20 @@
       </div>
     </nav>
 
+    <!-- MAIN CONTENT -->
     <main class="container-fluid pb-4">
-      <div class="row g-3">
-        <!-- Left: Lobby / Players -->
+      <div class="row g-3 justify-content-center">
+        <!-- LEFT COLUMN -------------------------------------------------------- -->
         <div class="col-lg-4">
-          <!-- Lobby section -->
           <section id="lobby-section" class="lobby-section">
+            <!-- Room details -->
             <div class="card shadow-sm mb-3">
               <div class="card-body">
                 <h2 class="h5 mb-2">Room details</h2>
                 <p class="small text-secondary mb-3">
-                  Share this code with your friends so they can join.
+                  Share this code with your friends.
                 </p>
+
                 <div class="d-flex align-items-center justify-content-between">
                   <div class="small text-secondary">Room code</div>
                   <div
@@ -92,16 +93,15 @@
                     <span class="small fw-normal ms-1">in room</span>
                   </span>
                 </div>
+
                 <ul
                   id="player-list"
                   class="list-group list-group-flush mt-3 small"
-                >
-                  <!-- Filled dynamically by room_script.js -->
-                </ul>
+                ></ul>
               </div>
             </div>
 
-            <!-- Host controls -->
+            <!-- HOST CONTROLS -->
             <div id="host-controls" class="host-controls">
               <div class="card shadow-sm">
                 <div class="card-body">
@@ -111,6 +111,7 @@
                       >Host</span
                     >
                   </div>
+
                   <p class="small text-secondary mb-3">
                     Only the host sees these controls.
                   </p>
@@ -124,6 +125,7 @@
                     >
                       Start game
                     </button>
+
                     <button
                       type="button"
                       class="btn btn-outline-secondary btn-sm"
@@ -131,6 +133,7 @@
                     >
                       Game settings
                     </button>
+
                     <button
                       type="button"
                       class="btn btn-outline-warning btn-sm"
@@ -138,6 +141,7 @@
                     >
                       Restart game
                     </button>
+
                     <button
                       type="button"
                       class="btn btn-outline-danger btn-sm"
@@ -160,10 +164,10 @@
           </section>
         </div>
 
-        <!-- Right: Game area -->
+        <!-- RIGHT COLUMN (GAME AREA) ----------------------------------------- -->
         <div class="col-lg-8">
           <section id="game-area" class="game-area">
-            <!-- Phase header -->
+            <!-- PHASE HEADER -->
             <div class="card shadow-sm mb-3">
               <div class="card-body d-flex flex-wrap gap-3 align-items-center">
                 <div>
@@ -175,28 +179,24 @@
                     Lobby
                   </div>
                 </div>
+
                 <div class="ms-auto d-flex align-items-center gap-3">
                   <div class="small text-secondary">
                     Time left:
-                    <span
-                      id="countdown-timer"
-                      class="fw-semibold"
-                    >
-                      0
-                    </span>
-                    s
+                    <span id="countdown-timer-small" class="fw-semibold">0</span>s
                   </div>
+
                   <div
                     id="empty-list-banner"
                     class="alert alert-warning py-1 px-3 mb-0 d-none"
                   >
-                    No more items for this player. AI or skip may activate.
+                    No items available (AI/skip will activate).
                   </div>
                 </div>
               </div>
             </div>
 
-            <!-- Countdown phase -->
+            <!-- COUNTDOWN PHASE -->
             <section
               id="countdown-section"
               class="phase-section mb-3"
@@ -206,11 +206,12 @@
                 <div class="card-body text-center">
                   <h3 class="h5 mb-2">Next round starting…</h3>
                   <p class="text-secondary small mb-3">
-                    Get ready! The round will start automatically.
+                    Get ready! The round starts automatically.
                   </p>
+
                   <div
+                    id="countdown-timer-big"
                     class="display-5 fw-bold"
-                    id="countdown-timer"
                   >
                     10
                   </div>
@@ -218,7 +219,7 @@
               </div>
             </section>
 
-            <!-- Preparation phase -->
+            <!-- PREPARATION PHASE -->
             <section
               id="preparation-section"
               class="phase-section mb-3"
@@ -228,75 +229,66 @@
                 <div class="card-body">
                   <div class="d-flex justify-content-between align-items-center mb-2">
                     <h3 class="h5 mb-0">Preparation</h3>
-                    <span class="badge bg-secondary-subtle text-secondary-emphasis">
+                    <span
+                      class="badge bg-secondary-subtle text-secondary-emphasis"
+                    >
                       <span id="prep-timer">30</span>s left
                     </span>
                   </div>
+
                   <p class="small text-secondary mb-3">
-                    Add truths or dares for other players. You can target one or
-                    more people each submission.
+                    Add truths or dares for other players.
                   </p>
 
-                  <!-- Toast-like submission success -->
                   <div
                     id="submission-success"
                     class="alert alert-success py-2 px-3 small mb-3"
                     style="display: none"
-                  >
-                    <!-- Filled in by JS -->
-                  </div>
+                  ></div>
 
                   <div class="row g-3">
-                    <!-- Left: form -->
+                    <!-- Form -->
                     <div class="col-md-7">
-                      <div class="mb-2">
-                        <label for="truth-dare-type" class="form-label"
-                          >Type</label
-                        >
-                        <select
-                          id="truth-dare-type"
-                          class="form-select form-select-sm"
-                        >
-                          <option value="truth">Truth</option>
-                          <option value="dare">Dare</option>
-                        </select>
-                      </div>
+                      <label class="form-label small">Type</label>
+                      <select
+                        id="truth-dare-type"
+                        class="form-select form-select-sm mb-2"
+                      >
+                        <option value="truth">Truth</option>
+                        <option value="dare">Dare</option>
+                      </select>
 
-                      <div class="mb-2">
-                        <label for="truth-dare-text" class="form-label"
-                          >Your prompt</label
-                        >
-                        <textarea
-                          id="truth-dare-text"
-                          class="form-control"
-                          rows="3"
-                          placeholder="Write a spicy truth or a fun dare…"
-                        ></textarea>
-                      </div>
+                      <label class="form-label small">Your prompt</label>
+                      <textarea
+                        id="truth-dare-text"
+                        rows="3"
+                        class="form-control mb-2"
+                        placeholder="Write a truth or dare..."
+                      ></textarea>
 
                       <button
-                        type="button"
-                        class="btn btn-success btn-sm mt-1"
+                        class="btn btn-success btn-sm"
                         onclick="submitTruthDare()"
                       >
                         Submit
                       </button>
                     </div>
 
-                    <!-- Right: choose targets -->
+                    <!-- Target players -->
                     <div class="col-md-5">
                       <div class="d-flex justify-content-between align-items-center mb-2">
-                        <div class="form-label mb-0 small">Target players</div>
+                        <span class="form-label small mb-0"
+                          >Target players</span
+                        >
+
                         <div class="small">
                           <button
-                            type="button"
                             class="btn btn-link btn-sm p-0 me-2"
                             onclick="selectAllPlayers()"
                           >
                             Select all
                           </button>
                           <button
-                            type="button"
                             class="btn btn-link btn-sm p-0"
                             onclick="deselectAllPlayers()"
                           >
@@ -304,19 +296,18 @@
                           </button>
                         </div>
                       </div>
+
                       <div
                         id="player-checkboxes"
                         class="player-checkbox-list small"
-                      >
-                        <!-- Filled dynamically -->
-                      </div>
+                      ></div>
                     </div>
                   </div>
                 </div>
               </div>
             </section>
 
-            <!-- Selection phase -->
+            <!-- SELECTION PHASE -->
             <section
               id="selection-section"
               class="phase-section mb-3"
@@ -325,22 +316,27 @@
               <div class="card shadow-sm">
                 <div class="card-body text-center">
                   <h3 class="h5 mb-2">Selecting a player…</h3>
+
                   <p class="small text-secondary mb-3">
-                    Everyone has an equal chance. May luck be in your favor.
+                    Everyone has an equal chance.
                   </p>
-                  <div class="display-6 mb-1" id="selected-player-name">
+
+                  <div
+                    id="selected-player-name"
+                    class="display-6 mb-1"
+                  >
                     ?
                   </div>
+
                   <div class="small text-secondary">
                     Time left:
-                    <span id="selection-timer" class="fw-semibold">10</span
-                    >s
+                    <span id="selection-timer" class="fw-semibold">10</span>s
                   </div>
                 </div>
               </div>
             </section>
 
-            <!-- Minigame phase -->
+            <!-- MINIGAME PHASE -->
             <section
               id="minigame-section"
               class="phase-section mb-3"
@@ -349,33 +345,27 @@
               <div class="card shadow-sm">
                 <div class="card-body">
                   <h3 class="h5 mb-2">Minigame</h3>
-                  <p
-                    id="minigame-participant-message"
-                    class="small text-secondary"
-                  >
-                    <!-- Filled dynamically -->
-                  </p>
 
-                  <div
-                    id="minigame-voting"
-                    class="row g-3 align-items-center mt-2"
-                  >
+                  <p id="minigame-participant-message"
+                    class="small text-secondary mb-3"
+                  ></p>
+
+                  <div id="minigame-voting" class="row g-3 mt-2">
+                    <!-- Player 1 -->
                     <div class="col-md-5">
                       <div class="border rounded-3 p-2 text-center">
-                        <div
-                          id="participant-1"
-                          class="fw-semibold mb-1"
-                        >
+                        <div id="participant-1" class="fw-semibold mb-1">
                           Player 1
                         </div>
+
                         <button
                           id="vote-btn-1"
-                          type="button"
                           class="btn btn-outline-success btn-sm"
                           onclick="voteMinigame(document.getElementById('participant-1').textContent)"
                         >
                           Vote
                         </button>
+
                         <div class="small text-secondary mt-1">
                           Votes:
                           <span
@@ -387,22 +377,21 @@
                       </div>
                     </div>
 
+                    <!-- Player 2 -->
                     <div class="col-md-5">
                       <div class="border rounded-3 p-2 text-center">
-                        <div
-                          id="participant-2"
-                          class="fw-semibold mb-1"
-                        >
+                        <div id="participant-2" class="fw-semibold mb-1">
                           Player 2
                         </div>
-                          <button
-                            id="vote-btn-2"
-                            type="button"
-                            class="btn btn-outline-success btn-sm"
-                            onclick="voteMinigame(document.getElementById('participant-2').textContent)"
-                          >
-                            Vote
-                          </button>
+
+                        <button
+                          id="vote-btn-2"
+                          class="btn btn-outline-success btn-sm"
+                          onclick="voteMinigame(document.getElementById('participant-2').textContent)"
+                        >
+                          Vote
+                        </button>
+
                         <div class="small text-secondary mt-1">
                           Votes:
                           <span
@@ -414,29 +403,22 @@
                       </div>
                     </div>
 
-                    <div class="col-md-2">
-                      <div class="small text-secondary">
-                        Total votes:
-                        <span
-                          id="minigame-vote-count"
-                          class="fw-semibold"
-                          >0</span
-                        >
-                        <br />
-                        Needed:
-                        <span
-                          id="minigame-required-votes"
-                          class="fw-semibold"
-                          >?</span
-                        >
-                      </div>
+                    <!-- Vote totals -->
+                    <div class="col-md-2 small text-secondary">
+                      Total votes:
+                      <span id="minigame-vote-count" class="fw-semibold">0</span>
+                      <br />
+                      Needed:
+                      <span id="minigame-required-votes" class="fw-semibold"
+                        >?</span
+                      >
                     </div>
                   </div>
                 </div>
               </div>
             </section>
 
-            <!-- Truth / Dare phase -->
+            <!-- TRUTH / DARE PHASE -->
             <section
               id="truth-dare-section"
               class="phase-section mb-3"
@@ -449,22 +431,16 @@
                       <div class="small text-secondary mb-1">
                         Performing player
                       </div>
+
                       <div
                         id="performing-player-name"
                         class="fw-semibold"
-                      >
-                        ?
-                      </div>
+                      ></div>
                     </div>
-                    <div class="ms-auto d-flex flex-column flex-sm-row gap-2">
-                      <div class="small text-secondary">
-                        Time left:
-                        <span
-                          id="truth-dare-timer"
-                          class="fw-semibold"
-                          >60</span
-                        >s
-                      </div>
+
+                    <div class="ms-auto small text-secondary">
+                      Time left:
+                      <span id="truth-dare-timer" class="fw-semibold">60</span>s
                     </div>
                   </div>
 
@@ -475,21 +451,20 @@
                     Waiting for challenge…
                   </div>
 
-                  <!-- Choice buttons (for selected player) -->
+                  <!-- Performer choices -->
                   <div
                     id="truth-dare-choice"
                     class="d-flex flex-wrap gap-2 mb-2"
                     style="display: none"
                   >
                     <button
-                      type="button"
                       class="btn btn-outline-info"
                       onclick="selectTruthDare('truth')"
                     >
                       Choose Truth
                     </button>
+
                     <button
-                      type="button"
                       class="btn btn-outline-danger"
                       onclick="selectTruthDare('dare')"
                     >
@@ -497,48 +472,30 @@
                     </button>
                   </div>
 
-                  <!-- After choice is made -->
-                  <div
-                    id="choice-display"
-                    class="small text-secondary mb-2"
-                  >
-                    <!-- Filled by JS -->
-                  </div>
-                  <div
-                    id="choice-made"
-                    class="small fw-semibold"
-                    style="display: none"
-                  >
-                    <!-- Filled by JS -->
-                  </div>
+                  <!-- Choice display -->
+                  <div id="choice-display" class="small text-secondary mb-2"></div>
+                  <div id="choice-made" class="small fw-semibold"></div>
 
-                  <!-- Vote skip section (non-performing players) -->
-                  <div
-                    id="vote-section"
-                    class="vote-section mt-3"
-                    style="display: none"
-                  >
-                    <div class="d-flex flex-wrap align-items-center gap-2 mb-1">
-                      <button
-                        id="vote-skip-button"
-                        type="button"
-                        class="btn btn-outline-warning btn-sm"
-                        onclick="voteSkip()"
-                      >
-                        Vote to Skip
-                      </button>
-                      <div class="small text-secondary">
-                        <span id="vote-count">0</span> /
-                        <span id="required-votes">?</span>
-                        votes to skip
-                      </div>
-                    </div>
+                  <!-- Skip votes -->
+                  <div id="vote-section" style="display: none">
+                    <button
+                      id="vote-skip-button"
+                      class="btn btn-outline-warning btn-sm me-2"
+                      onclick="voteSkip()"
+                    >
+                      Vote to Skip
+                    </button>
+
+                    <span class="small text-secondary">
+                      <span id="vote-count">0</span> /
+                      <span id="required-votes">?</span> votes
+                    </span>
                   </div>
                 </div>
               </div>
             </section>
 
-            <!-- End game section -->
+            <!-- END GAME -->
             <section
               id="end-game-section"
               class="phase-section"
@@ -548,29 +505,31 @@
                 <div class="card-body">
                   <div class="text-center mb-3">
                     <div class="display-6 mb-2">🎉 Game over! 🎉</div>
+
                     <p class="small text-secondary mb-0">
-                      Here’s how everyone did this game.
+                      Final results from the game.
                     </p>
                   </div>
 
                   <div class="row g-3">
+                    <!-- Top players -->
                     <div class="col-md-5">
                       <h3 class="h6 mb-2">Top players</h3>
+
                       <ul
                         id="top-players-list"
                         class="list-group list-group-flush small"
-                      >
-                        <!-- Filled by JS -->
-                      </ul>
+                      ></ul>
                     </div>
+
+                    <!-- Round history -->
                     <div class="col-md-7">
                       <h3 class="h6 mb-2">Round history</h3>
+
                       <div
                         id="round-history-list"
                         class="round-history-list small border rounded-3 p-2"
-                      >
-                        <!-- Filled by JS -->
-                      </div>
+                      ></div>
                     </div>
                   </div>
                 </div>
@@ -583,27 +542,29 @@
                 style="display: none"
               >
                 <div class="card shadow-sm">
-                  <div class="card-body d-flex flex-wrap gap-2 justify-content-between align-items-center">
+                  <div
+                    class="card-body d-flex flex-wrap gap-2 justify-content-between align-items-center"
+                  >
                     <div class="small text-secondary">
                       Host options for this room
                     </div>
+
                     <div class="d-flex flex-wrap gap-2 ms-auto">
                       <button
-                        type="button"
                         class="btn btn-outline-secondary btn-sm"
                         onclick="restartGame()"
                       >
-                        Restart with same players
+                        Restart
                       </button>
+
                       <button
-                        type="button"
                         class="btn btn-outline-danger btn-sm"
                         onclick="destroyRoom()"
                       >
                         Close room
                       </button>
+
                       <button
-                        type="button"
                         class="btn btn-outline-dark btn-sm"
                         onclick="leaveRoom()"
                       >
@@ -619,17 +580,13 @@
       </div>
     </main>
 
-    <!-- Settings modal (custom, controlled by room_script.js) -->
-    <div
-      id="settings-modal"
-      class="modal td-settings-modal"
-      tabindex="-1"
-      style="display: none"
-    >
+    <!-- SETTINGS MODAL (custom, JS-controlled) -->
+    <div id="settings-modal" class="td-settings-modal">
       <div class="modal-dialog modal-lg modal-dialog-centered">
         <div class="modal-content bg-body">
           <div class="modal-header">
             <h5 class="modal-title">Game settings</h5>
+
             <button
               type="button"
               class="btn-close"
@@ -637,59 +594,51 @@
               onclick="closeSettings()"
             ></button>
           </div>
+
           <div class="modal-body">
-            <!-- Tabs -->
-            <ul class="nav nav-pills mb-3 small" role="tablist">
+            <ul class="nav nav-pills mb-3 small">
               <li class="nav-item">
                 <button
-                  type="button"
                   class="nav-link settings-tab active"
                   onclick="showSettingsTab('game')"
                 >
                   Gameplay
                 </button>
               </li>
+
               <li class="nav-item">
                 <button
-                  type="button"
                   class="nav-link settings-tab"
                   onclick="showSettingsTab('truths')"
                 >
-                  Truth &amp; Dare lists
+                  Truths
                 </button>
               </li>
+
               <li class="nav-item">
                 <button
-                  type="button"
                   class="nav-link settings-tab"
                   onclick="showSettingsTab('dares')"
                 >
-                  Defaults &amp; presets
+                  Dares
                 </button>
               </li>
             </ul>
 
-            <!-- Gameplay tab -->
-            <div
-              id="settings-tab-game"
-              class="settings-tab-content active"
-            >
+            <!-- TAB: GAMEPLAY -->
+            <div id="settings-tab-game" class="settings-tab-content active">
               <div class="row g-3">
                 <div class="col-md-6">
                   <label for="setting-countdown" class="form-label"
                     >Countdown (s)</label
                   >
                   <input
+                    id="setting-countdown"
+                    class="form-control"
                     type="number"
                     min="3"
                     max="30"
-                    id="setting-countdown"
-                    class="form-control"
-                    value="10"
                   />
-                  <div class="form-text small">
-                    Before each round (3–30 seconds).
-                  </div>
                 </div>
 
                 <div class="col-md-6">
@@ -697,16 +646,12 @@
                     >Preparation (s)</label
                   >
                   <input
+                    id="setting-preparation"
+                    class="form-control"
                     type="number"
                     min="10"
                     max="120"
-                    id="setting-preparation"
-                    class="form-control"
-                    value="30"
                   />
-                  <div class="form-text small">
-                    Time to submit truths/dares (10–120 seconds).
-                  </div>
                 </div>
 
                 <div class="col-md-6">
@@ -714,16 +659,12 @@
                     >Selection (s)</label
                   >
                   <input
+                    id="setting-selection"
+                    class="form-control"
                     type="number"
                     min="5"
                     max="30"
-                    id="setting-selection"
-                    class="form-control"
-                    value="10"
                   />
-                  <div class="form-text small">
-                    Time to show who was selected (5–30 seconds).
-                  </div>
                 </div>
 
                 <div class="col-md-6">
@@ -731,16 +672,12 @@
                     >Truth/Dare duration (s)</label
                   >
                   <input
+                    id="setting-truthdare"
+                    class="form-control"
                     type="number"
                     min="30"
                     max="180"
-                    id="setting-truthdare"
-                    class="form-control"
-                    value="60"
                   />
-                  <div class="form-text small">
-                    Time to perform a challenge (30–180 seconds).
-                  </div>
                 </div>
 
                 <div class="col-md-6">
@@ -748,16 +685,12 @@
                     >Skip duration (s)</label
                   >
                   <input
+                    id="setting-skip"
+                    class="form-control"
                     type="number"
                     min="3"
                     max="30"
-                    id="setting-skip"
-                    class="form-control"
-                    value="5"
                   />
-                  <div class="form-text small">
-                    Remaining time if a skip is triggered (3–30 seconds).
-                  </div>
                 </div>
 
                 <div class="col-md-6">
@@ -765,16 +698,12 @@
                     >Maximum rounds</label
                   >
                   <input
+                    id="setting-maxrounds"
+                    class="form-control"
                     type="number"
                     min="1"
                     max="50"
-                    id="setting-maxrounds"
-                    class="form-control"
-                    value="10"
                   />
-                  <div class="form-text small">
-                    Game ends after this many rounds (1–50).
-                  </div>
                 </div>
 
                 <div class="col-md-6">
@@ -782,175 +711,130 @@
                     >Minigame chance (%)</label
                   >
                   <input
+                    id="setting-minigame"
+                    class="form-control"
                     type="number"
                     min="0"
                     max="100"
-                    id="setting-minigame"
-                    class="form-control"
-                    value="20"
                   />
-                  <div class="form-text small">
-                    Chance that a minigame is triggered (0–100).
-                  </div>
                 </div>
 
                 <div class="col-md-6">
                   <div class="form-check mt-4 pt-2">
                     <input
+                      id="setting-ai-generation"
                       class="form-check-input"
                       type="checkbox"
-                      id="setting-ai-generation"
                     />
-                    <label
-                      class="form-check-label"
-                      for="setting-ai-generation"
-                    >
+
+                    <label class="form-check-label" for="setting-ai-generation">
                       Enable AI content generation
                     </label>
-                    <div class="form-text small">
-                      Uses Gemini 2.0 Flash-Lite when lists are empty.
-                    </div>
                   </div>
                 </div>
               </div>
             </div>
 
-            <!-- Truth & Dare lists tab -->
-            <div
-              id="settings-tab-truths"
-              class="settings-tab-content"
-            >
-              <p class="small text-secondary mb-2">
-                Manage the default truth and dare lists that every player
-                starts with.
-              </p>
+            <!-- TAB: TRUTHS -->
+            <div id="settings-tab-truths" class="settings-tab-content">
+              <h6 class="small text-uppercase text-secondary mb-2">
+                Default truths
+              </h6>
 
-              <div class="row g-3">
-                <div class="col-md-6">
-                  <h6 class="small text-uppercase text-secondary mb-2">
-                    Default truths
-                  </h6>
-                  <div
-                    id="default-truths-list"
-                    class="default-list small border rounded-3 p-2"
-                  ></div>
-                  <div class="d-flex gap-2 mt-2">
-                    <button
-                      type="button"
-                      class="btn btn-outline-success btn-sm"
-                      onclick="addDefaultItem('truth')"
-                    >
-                      Add
-                    </button>
-                    <button
-                      type="button"
-                      class="btn btn-outline-primary btn-sm"
-                      onclick="editDefaultItem('truth')"
-                    >
-                      Edit selected
-                    </button>
-                    <button
-                      type="button"
-                      class="btn btn-outline-danger btn-sm"
-                      onclick="removeDefaultItems('truth')"
-                    >
-                      Remove selected
-                    </button>
-                  </div>
-                </div>
+              <div
+                id="default-truths-list"
+                class="default-list small border rounded-3 p-2"
+              ></div>
 
-                <div class="col-md-6">
-                  <h6 class="small text-uppercase text-secondary mb-2">
-                    Default dares
-                  </h6>
-                  <div
-                    id="default-dares-list"
-                    class="default-list small border rounded-3 p-2"
-                  ></div>
-                  <div class="d-flex gap-2 mt-2">
-                    <button
-                      type="button"
-                      class="btn btn-outline-success btn-sm"
-                      onclick="addDefaultItem('dare')"
-                    >
-                      Add
-                    </button>
-                    <button
-                      type="button"
-                      class="btn btn-outline-primary btn-sm"
-                      onclick="editDefaultItem('dare')"
-                    >
-                      Edit selected
-                    </button>
-                    <button
-                      type="button"
-                      class="btn btn-outline-danger btn-sm"
-                      onclick="removeDefaultItems('dare')"
-                    >
-                      Remove selected
-                    </button>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            <!-- Defaults & presets tab -->
-            <div
-              id="settings-tab-dares"
-              class="settings-tab-content"
-            >
-              <p class="small text-secondary mb-3">
-                Load or save JSON presets with predefined truths and dares for
-                future games.
-              </p>
-
-              <div class="d-flex flex-wrap gap-2 mb-3">
+              <div class="d-flex gap-2 mt-2">
                 <button
-                  type="button"
-                  class="btn btn-outline-primary btn-sm"
-                  onclick="triggerLoadPreset()"
-                >
-                  Load preset from file…
-                </button>
-                <button
-                  type="button"
                   class="btn btn-outline-success btn-sm"
-                  onclick="saveDefaultsAsPreset()"
+                  onclick="addDefaultItem('truth')"
                 >
-                  Save current defaults as preset
+                  Add
+                </button>
+
+                <button
+                  class="btn btn-outline-primary btn-sm"
+                  onclick="editDefaultItem('truth')"
+                >
+                  Edit selected
+                </button>
+
+                <button
+                  class="btn btn-outline-danger btn-sm"
+                  onclick="removeDefaultItems('truth')"
+                >
+                  Remove selected
+                </button>
+              </div>
+            </div>
+
+            <!-- TAB: DARES -->
+            <div id="settings-tab-daressfdf" class="settings-tab-content">
+              <h6 class="small text-uppercase text-secondary mb-2">
+                Default dares
+              </h6>
+
+              <div
+                id="default-dares-list"
+                class="default-list small border rounded-3 p-2"
+              ></div>
+
+              <div class="d-flex gap-2 mt-2">
+                <button
+                  class="btn btn-outline-success btn-sm"
+                  onclick="addDefaultItem('dare')"
+                >
+                  Add
+                </button>
+
+                <button
+                  class="btn btn-outline-primary btn-sm"
+                  onclick="editDefaultItem('dare')"
+                >
+                  Edit selected
+                </button>
+
+                <button
+                  class="btn btn-outline-danger btn-sm"
+                  onclick="removeDefaultItems('dare')"
+                >
+                  Remove selected
                 </button>
               </div>
 
-              <!-- Hidden file input used by triggerLoadPreset/loadPresetFile -->
+              <hr />
+
+              <button
+                class="btn btn-outline-primary btn-sm mb-2"
+                onclick="triggerLoadPreset()"
+              >
+                Load preset
+              </button>
+
+              <button
+                class="btn btn-outline-success btn-sm mb-2"
+                onclick="saveDefaultsAsPreset()"
+              >
+                Save defaults as preset
+              </button>
+
               <input
                 type="file"
                 id="load-preset-file"
                 class="d-none"
-                accept=".json,application/json"
+                accept=".json"
                 onchange="loadPresetFile(event)"
               />
-
-              <p class="small text-secondary mb-0">
-                Preset files must contain <code>truths</code> and
-                <code>dares</code> arrays. Loading a preset replaces the current
-                defaults for all players.
-              </p>
             </div>
           </div>
 
           <div class="modal-footer">
-            <button
-              type="button"
-              class="btn btn-secondary"
-              onclick="closeSettings()"
-            >
+            <button class="btn btn-secondary" onclick="closeSettings()">
               Close
             </button>
-            <button
-              type="button"
-              class="btn btn-primary"
-              onclick="saveSettings()"
-            >
+            <button class="btn btn-primary" onclick="saveSettings()">
               Save changes
             </button>
           </div>
@@ -958,59 +842,57 @@
       </div>
     </div>
 
-    <!-- Socket.IO -->
+    <!-- JAVASCRIPT IMPORTS -->
     <script
       src="https://cdn.socket.io/4.6.1/socket.io.min.js"
       crossorigin="anonymous"
     ></script>
 
     <script>
-      // Pass template variables to JavaScript
       const ROOM_CODE = "{{ room_code }}";
       const PLAYER_NAME = "{{ name }}";
     </script>
 
-    <!-- Game logic -->
     <script src="{{ url_for('static', filename='room_script.js') }}"></script>
 
-    <!-- Bootstrap bundle (optional for future components) -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 
-    <!-- Theme toggle: same behaviour as on index.html -->
+    <!-- THEME TOGGLE -->
     <script>
       (function () {
         const stored = localStorage.getItem("td-theme");
         const prefersDark =
           window.matchMedia &&
           window.matchMedia("(prefers-color-scheme: dark)").matches;
-        const initial = stored || (prefersDark ? "dark" : "dark");
 
+        const initial = stored || (prefersDark ? "dark" : "dark");
         document.documentElement.setAttribute("data-bs-theme", initial);
 
         function updateToggle(mode) {
           const btn = document.getElementById("theme-toggle");
           if (!btn) return;
+
           const label = btn.querySelector(".td-theme-label");
-          if (mode === "dark") {
-            if (label) label.textContent = "Light mode";
-          } else {
-            if (label) label.textContent = "Dark mode";
-          }
+
+          if (mode === "dark") label.textContent = "Light mode";
+          else label.textContent = "Dark mode";
         }
 
         document.addEventListener("DOMContentLoaded", function () {
           updateToggle(initial);
-          const btn = document.getElementById("theme-toggle");
-          if (!btn) return;
-          btn.addEventListener("click", function () {
-            const current =
-              document.documentElement.getAttribute("data-bs-theme") ||
-              "dark";
-            const next = current === "dark" ? "light" : "dark";
-            document.documentElement.setAttribute("data-bs-theme", next);
-            localStorage.setItem("td-theme", next);
-            updateToggle(next);
-          });
+
+          document
+            .getElementById("theme-toggle")
+            .addEventListener("click", function () {
+              const current =
+                document.documentElement.getAttribute("data-bs-theme") ||
+                "dark";
+              const next = current === "dark" ? "light" : "dark";
+
+              document.documentElement.setAttribute("data-bs-theme", next);
+              localStorage.setItem("td-theme", next);
+              updateToggle(next);
+            });
         });
       })();
     </script>
