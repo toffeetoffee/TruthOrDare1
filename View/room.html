@@ -2,15 +2,16 @@
 <html lang="en" data-bs-theme="dark">
   <head>
     <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width,initial-scale=1" />
-    <title>Room {{ room_code }} – Truth or Dare</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Truth or Dare – Room {{ room_code }}</title>
 
-    <!-- Bootstrap 5.3 -->
+    <!-- Bootstrap 5 -->
     <link
       href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css"
       rel="stylesheet"
     />
 
+    <!-- Custom -->
     <link
       rel="stylesheet"
       href="{{ url_for('static', filename='room_styles.css') }}"
@@ -18,160 +19,99 @@
   </head>
 
   <body class="bg-body text-body">
-    <!-- NAVBAR -->
-    <nav class="navbar navbar-expand-lg border-bottom mb-3 bg-body">
-      <div class="container-fluid">
-        <span class="navbar-brand fw-semibold">🎲 Truth or Dare</span>
+    <!-- Navbar -->
+    <nav class="navbar navbar-expand-lg border-bottom bg-body px-3">
+      <span class="navbar-brand fw-semibold">🎲 Truth or Dare</span>
 
-        <div class="d-none d-md-flex align-items-center gap-3 ms-auto me-3">
-          <div class="small text-secondary text-nowrap">
-            Room
-            <span class="badge bg-primary-subtle text-primary-emphasis">
-              {{ room_code }}
-            </span>
-          </div>
-          <div class="small text-secondary text-nowrap">
-            You are:
-            <span class="fw-semibold">{{ name }}</span>
-          </div>
-        </div>
+      <div class="ms-auto d-flex align-items-center gap-2">
+        <button
+          id="theme-toggle"
+          type="button"
+          class="btn btn-outline-light btn-sm d-flex align-items-center gap-2"
+        >
+          <span class="td-theme-label">Light mode</span>
+        </button>
 
-        <div class="d-flex align-items-center gap-2 ms-auto">
-          <button
-            type="button"
-            class="btn btn-outline-light btn-sm d-flex align-items-center gap-1"
-            id="theme-toggle"
-          >
-            <span class="td-theme-label">Light mode</span>
-          </button>
-
-          <button
-            type="button"
-            class="btn btn-outline-danger btn-sm"
-            onclick="leaveRoom()"
-          >
-            Leave
-          </button>
-        </div>
+        <button type="button" class="btn btn-outline-danger btn-sm" onclick="leaveRoom()">
+          Leave
+        </button>
       </div>
     </nav>
 
-    <!-- MAIN CONTENT -->
-    <main class="container-fluid pb-4">
-      <div class="row g-3 justify-content-center">
-        <!-- LEFT COLUMN -------------------------------------------------------- -->
-        <div class="col-lg-4">
+    <main class="container-fluid py-3">
+      <div class="row g-3">
+        <!-- LEFT COLUMN ===================================================== -->
+        <div class="col-lg-4" id="left-column">
+          <!-- Lobby Section -->
           <section id="lobby-section" class="lobby-section">
-            <!-- Room details -->
-            <div class="card shadow-sm mb-3">
+            <!-- Room Details -->
+            <div class="card mb-3 shadow-sm">
               <div class="card-body">
-                <h2 class="h5 mb-2">Room details</h2>
-                <p class="small text-secondary mb-3">
-                  Share this code with your friends.
-                </p>
+                <h5 class="card-title mb-1">Room Details</h5>
+                <p class="small text-secondary">Share this code with others to join.</p>
 
-                <div class="d-flex align-items-center justify-content-between">
-                  <div class="small text-secondary">Room code</div>
-                  <div
-                    class="badge bg-primary-subtle text-primary-emphasis fs-6 px-3 py-2"
-                  >
+                <div class="d-flex justify-content-between">
+                  <span class="small text-secondary">Room code</span>
+                  <span class="badge bg-primary-subtle text-primary-emphasis fs-6 px-3 py-2">
                     {{ room_code }}
-                  </div>
+                  </span>
                 </div>
               </div>
             </div>
 
-            <!-- Player list -->
-            <div class="card shadow-sm mb-3">
+            <!-- Player List -->
+            <div class="card mb-3 shadow-sm">
               <div class="card-body">
                 <div class="d-flex justify-content-between align-items-center">
-                  <h2 class="h5 mb-0">Players</h2>
-                  <span
-                    class="badge bg-secondary-subtle text-secondary-emphasis"
-                  >
-                    <span id="player-count">1</span>
-                    <span class="small fw-normal ms-1">in room</span>
+                  <h5 class="card-title mb-0">Players</h5>
+                  <span class="badge bg-secondary-subtle text-secondary-emphasis">
+                    <span id="player-count">0</span>
                   </span>
                 </div>
 
-                <ul
-                  id="player-list"
-                  class="list-group list-group-flush mt-3 small"
-                ></ul>
+                <ul id="player-list" class="list-group list-group-flush mt-3 small"></ul>
               </div>
             </div>
 
-            <!-- HOST CONTROLS -->
+            <!-- Host Controls -->
             <div id="host-controls" class="host-controls">
               <div class="card shadow-sm">
                 <div class="card-body">
-                  <div class="d-flex justify-content-between align-items-center mb-2">
-                    <h2 class="h6 mb-0">Host controls</h2>
-                    <span class="badge bg-warning-subtle text-warning-emphasis"
-                      >Host</span
-                    >
-                  </div>
-
-                  <p class="small text-secondary mb-3">
-                    Only the host sees these controls.
-                  </p>
+                  <h6 class="fw-semibold mb-2">
+                    Host Controls <span class="badge bg-warning-subtle text-warning-emphasis">Host</span>
+                  </h6>
 
                   <div class="d-grid gap-2 mb-3">
-                    <button
-                      id="start-button"
-                      type="button"
-                      class="btn btn-primary btn-sm"
-                      onclick="startGame()"
-                    >
-                      Start game
+                    <button id="start-button" class="btn btn-primary btn-sm" onclick="startGame()">
+                      Start Game
                     </button>
 
-                    <button
-                      type="button"
-                      class="btn btn-outline-secondary btn-sm"
-                      onclick="openSettings()"
-                    >
-                      Game settings
+                    <button class="btn btn-outline-secondary btn-sm" onclick="openSettings()">
+                      Game Settings
                     </button>
 
-                    <button
-                      type="button"
-                      class="btn btn-outline-warning btn-sm"
-                      onclick="restartGame()"
-                    >
-                      Restart game
+                    <button class="btn btn-outline-warning btn-sm" onclick="restartGame()">
+                      Restart Game
                     </button>
 
-                    <button
-                      type="button"
-                      class="btn btn-outline-danger btn-sm"
-                      onclick="destroyRoom()"
-                    >
-                      Destroy room
+                    <button class="btn btn-outline-danger btn-sm" onclick="destroyRoom()">
+                      Destroy Room
                     </button>
                   </div>
-
-                  <button
-                    type="button"
-                    class="btn btn-link text-danger p-0 small"
-                    onclick="leaveRoom()"
-                  >
-                    Leave as host
-                  </button>
                 </div>
               </div>
             </div>
           </section>
         </div>
 
-        <!-- RIGHT COLUMN (GAME AREA) ----------------------------------------- -->
+        <!-- GAME AREA ======================================================== -->
         <div class="col-lg-8">
           <section id="game-area" class="game-area">
             <!-- PHASE HEADER -->
             <div class="card shadow-sm mb-3">
-              <div class="card-body d-flex flex-wrap gap-3 align-items-center">
+              <div class="card-body d-flex flex-wrap align-items-center gap-3">
                 <div>
-                  <div class="small text-secondary mb-1">Current phase</div>
+                  <div class="small text-secondary mb-1">Current Phase</div>
                   <div
                     id="phase-type"
                     class="badge rounded-pill bg-info-subtle text-info-emphasis px-3 py-2"
@@ -180,127 +120,85 @@
                   </div>
                 </div>
 
-                <div class="ms-auto d-flex align-items-center gap-3">
-                  <div class="small text-secondary">
-                    Time left:
-                    <span id="countdown-timer-small" class="fw-semibold">0</span>s
-                  </div>
+                <div class="ms-auto small text-secondary">
+                  Time left: <span id="countdown-timer" class="fw-semibold">0</span>s
+                </div>
 
-                  <div
-                    id="empty-list-banner"
-                    class="alert alert-warning py-1 px-3 mb-0 d-none"
-                  >
-                    No items available (AI/skip will activate).
-                  </div>
+                <div
+                  id="empty-list-banner"
+                  class="alert alert-warning py-1 px-3 mb-0 d-none"
+                >
+                  No more items. AI or skip may activate.
                 </div>
               </div>
             </div>
 
             <!-- COUNTDOWN PHASE -->
-            <section
-              id="countdown-section"
-              class="phase-section mb-3"
-              style="display: none"
-            >
+            <section id="countdown-section" class="phase-section mb-3" style="display:none;">
               <div class="card shadow-sm">
                 <div class="card-body text-center">
                   <h3 class="h5 mb-2">Next round starting…</h3>
-                  <p class="text-secondary small mb-3">
-                    Get ready! The round starts automatically.
-                  </p>
-
-                  <div
-                    id="countdown-timer-big"
-                    class="display-5 fw-bold"
-                  >
-                    10
-                  </div>
+                  <p class="text-secondary small mb-3">Get ready!</p>
+                  <div id="big-countdown-timer" class="display-1 fw-bold">10</div>
                 </div>
               </div>
             </section>
 
             <!-- PREPARATION PHASE -->
-            <section
-              id="preparation-section"
-              class="phase-section mb-3"
-              style="display: none"
-            >
+            <section id="preparation-section" class="phase-section mb-3" style="display:none;">
               <div class="card shadow-sm">
                 <div class="card-body">
-                  <div class="d-flex justify-content-between align-items-center mb-2">
-                    <h3 class="h5 mb-0">Preparation</h3>
-                    <span
-                      class="badge bg-secondary-subtle text-secondary-emphasis"
-                    >
-                      <span id="prep-timer">30</span>s left
+                  <div class="d-flex justify-content-between">
+                    <h5 class="mb-2">Preparation</h5>
+                    <span class="badge bg-secondary-subtle text-secondary-emphasis">
+                      <span id="prep-timer">30</span>s
                     </span>
                   </div>
 
-                  <p class="small text-secondary mb-3">
+                  <p class="small text-secondary">
                     Add truths or dares for other players.
                   </p>
 
                   <div
                     id="submission-success"
                     class="alert alert-success py-2 px-3 small mb-3"
-                    style="display: none"
+                    style="display:none;"
                   ></div>
 
                   <div class="row g-3">
-                    <!-- Form -->
+                    <!-- Left -->
                     <div class="col-md-7">
-                      <label class="form-label small">Type</label>
-                      <select
-                        id="truth-dare-type"
-                        class="form-select form-select-sm mb-2"
-                      >
+                      <label class="form-label">Type</label>
+                      <select id="truth-dare-type" class="form-select form-select-sm mb-2">
                         <option value="truth">Truth</option>
                         <option value="dare">Dare</option>
                       </select>
 
-                      <label class="form-label small">Your prompt</label>
+                      <label class="form-label">Your prompt</label>
                       <textarea
                         id="truth-dare-text"
-                        rows="3"
                         class="form-control mb-2"
-                        placeholder="Write a truth or dare..."
+                        rows="3"
                       ></textarea>
 
-                      <button
-                        class="btn btn-success btn-sm"
-                        onclick="submitTruthDare()"
-                      >
-                        Submit
-                      </button>
+                      <button class="btn btn-success btn-sm" onclick="submitTruthDare()">Submit</button>
                     </div>
 
-                    <!-- Target players -->
+                    <!-- Right -->
                     <div class="col-md-5">
-                      <div class="d-flex justify-content-between align-items-center mb-2">
-                        <span class="form-label small mb-0"
-                          >Target players</span
-                        >
-
+                      <div class="d-flex justify-content-between mb-2">
+                        <label class="form-label mb-0 small">Target players</label>
                         <div class="small">
-                          <button
-                            class="btn btn-link btn-sm p-0 me-2"
-                            onclick="selectAllPlayers()"
+                          <button class="btn btn-link btn-sm p-0" onclick="selectAllPlayers()"
+                            >Select all</button
                           >
-                            Select all
-                          </button>
-                          <button
-                            class="btn btn-link btn-sm p-0"
-                            onclick="deselectAllPlayers()"
+                          <button class="btn btn-link btn-sm p-0" onclick="deselectAllPlayers()"
+                            >Clear</button
                           >
-                            Clear
-                          </button>
                         </div>
                       </div>
 
-                      <div
-                        id="player-checkboxes"
-                        class="player-checkbox-list small"
-                      ></div>
+                      <div id="player-checkboxes" class="player-checkbox-list small"></div>
                     </div>
                   </div>
                 </div>
@@ -308,267 +206,138 @@
             </section>
 
             <!-- SELECTION PHASE -->
-            <section
-              id="selection-section"
-              class="phase-section mb-3"
-              style="display: none"
-            >
+            <section id="selection-section" class="phase-section mb-3" style="display:none;">
               <div class="card shadow-sm">
                 <div class="card-body text-center">
-                  <h3 class="h5 mb-2">Selecting a player…</h3>
-
-                  <p class="small text-secondary mb-3">
-                    Everyone has an equal chance.
-                  </p>
-
-                  <div
-                    id="selected-player-name"
-                    class="display-6 mb-1"
-                  >
-                    ?
-                  </div>
-
+                  <h5 class="mb-2">Selecting a player…</h5>
+                  <div id="selected-player-name" class="display-6 mb-1">?</div>
                   <div class="small text-secondary">
-                    Time left:
-                    <span id="selection-timer" class="fw-semibold">10</span>s
+                    Time left: <span id="selection-timer" class="fw-semibold">10</span>s
                   </div>
                 </div>
               </div>
             </section>
 
             <!-- MINIGAME PHASE -->
-            <section
-              id="minigame-section"
-              class="phase-section mb-3"
-              style="display: none"
-            >
+            <section id="minigame-section" class="phase-section mb-3" style="display:none;">
               <div class="card shadow-sm">
                 <div class="card-body">
-                  <h3 class="h5 mb-2">Minigame</h3>
+                  <h3 id="minigame-title" class="h5 mb-2">Mini Game</h3>
+                  <p id="minigame-description" class="small text-secondary"></p>
 
-                  <p id="minigame-participant-message"
-                    class="small text-secondary mb-3"
-                  ></p>
+                  <div id="minigame-participant-message" style="display:none;">
+                    <p></p>
+                  </div>
+
+                  <p id="voting-instruction" class="fw-semibold"></p>
 
                   <div id="minigame-voting" class="row g-3 mt-2">
-                    <!-- Player 1 -->
-                    <div class="col-md-5">
-                      <div class="border rounded-3 p-2 text-center">
-                        <div id="participant-1" class="fw-semibold mb-1">
-                          Player 1
-                        </div>
-
-                        <button
-                          id="vote-btn-1"
-                          class="btn btn-outline-success btn-sm"
-                          onclick="voteMinigame(document.getElementById('participant-1').textContent)"
-                        >
-                          Vote
-                        </button>
-
-                        <div class="small text-secondary mt-1">
-                          Votes:
-                          <span
-                            id="participant-1-votes"
-                            class="fw-semibold"
-                            >0</span
-                          >
+                    <div class="col-md-5 text-center">
+                      <div class="border rounded-3 p-2">
+                        <div id="participant-1" class="fw-semibold mb-1">Player 1</div>
+                        <button id="vote-btn-1" class="btn btn-outline-success btn-sm">Vote</button>
+                        <div class="small text-secondary">
+                          Votes: <span id="participant-1-votes">0</span>
                         </div>
                       </div>
                     </div>
 
-                    <!-- Player 2 -->
-                    <div class="col-md-5">
-                      <div class="border rounded-3 p-2 text-center">
-                        <div id="participant-2" class="fw-semibold mb-1">
-                          Player 2
-                        </div>
-
-                        <button
-                          id="vote-btn-2"
-                          class="btn btn-outline-success btn-sm"
-                          onclick="voteMinigame(document.getElementById('participant-2').textContent)"
-                        >
-                          Vote
-                        </button>
-
-                        <div class="small text-secondary mt-1">
-                          Votes:
-                          <span
-                            id="participant-2-votes"
-                            class="fw-semibold"
-                            >0</span
-                          >
+                    <div class="col-md-5 text-center">
+                      <div class="border rounded-3 p-2">
+                        <div id="participant-2" class="fw-semibold mb-1">Player 2</div>
+                        <button id="vote-btn-2" class="btn btn-outline-success btn-sm">Vote</button>
+                        <div class="small text-secondary">
+                          Votes: <span id="participant-2-votes">0</span>
                         </div>
                       </div>
                     </div>
 
-                    <!-- Vote totals -->
-                    <div class="col-md-2 small text-secondary">
-                      Total votes:
-                      <span id="minigame-vote-count" class="fw-semibold">0</span>
-                      <br />
-                      Needed:
-                      <span id="minigame-required-votes" class="fw-semibold"
-                        >?</span
-                      >
+                    <div class="col-md-2 text-center small text-secondary">
+                      Total: <span id="minigame-vote-count">0</span><br />
+                      Needed: <span id="minigame-required-votes">0</span>
                     </div>
                   </div>
                 </div>
               </div>
             </section>
 
-            <!-- TRUTH / DARE PHASE -->
-            <section
-              id="truth-dare-section"
-              class="phase-section mb-3"
-              style="display: none"
-            >
+            <!-- TRUTH/DARE PHASE -->
+            <section id="truth-dare-section" class="phase-section mb-3" style="display:none;">
               <div class="card shadow-sm">
                 <div class="card-body">
-                  <div class="d-flex flex-wrap gap-3 align-items-center mb-3">
+                  <div class="d-flex justify-content-between align-items-center">
                     <div>
-                      <div class="small text-secondary mb-1">
-                        Performing player
-                      </div>
-
-                      <div
-                        id="performing-player-name"
-                        class="fw-semibold"
-                      ></div>
+                      <div class="small text-secondary">Performing player</div>
+                      <div id="performing-player-name" class="fw-semibold">?</div>
                     </div>
 
-                    <div class="ms-auto small text-secondary">
-                      Time left:
-                      <span id="truth-dare-timer" class="fw-semibold">60</span>s
+                    <div class="small text-secondary">
+                      Time left: <span id="truth-dare-timer" class="fw-semibold">60</span>s
                     </div>
                   </div>
 
                   <div
                     id="challenge-text"
-                    class="border rounded-3 p-3 bg-body-secondary mb-3"
+                    class="border rounded-3 p-3 bg-body-secondary mt-3 mb-3"
                   >
                     Waiting for challenge…
                   </div>
 
-                  <!-- Performer choices -->
-                  <div
-                    id="truth-dare-choice"
-                    class="d-flex flex-wrap gap-2 mb-2"
-                    style="display: none"
-                  >
-                    <button
-                      class="btn btn-outline-info"
-                      onclick="selectTruthDare('truth')"
-                    >
-                      Choose Truth
-                    </button>
-
-                    <button
-                      class="btn btn-outline-danger"
-                      onclick="selectTruthDare('dare')"
-                    >
-                      Choose Dare
-                    </button>
+                  <div id="truth-dare-choice" class="d-flex gap-2 mb-3" style="display:none;">
+                    <button class="btn btn-outline-info" onclick="selectTruthDare('truth')">Truth</button>
+                    <button class="btn btn-outline-danger" onclick="selectTruthDare('dare')">Dare</button>
                   </div>
 
-                  <!-- Choice display -->
-                  <div id="choice-display" class="small text-secondary mb-2"></div>
-                  <div id="choice-made" class="small fw-semibold"></div>
+                  <div id="choice-display" class="small text-secondary"></div>
+                  <div id="choice-made" class="small fw-semibold" style="display:none;"></div>
 
-                  <!-- Skip votes -->
-                  <div id="vote-section" style="display: none">
+                  <div id="vote-section" class="vote-section mt-3" style="display:none;">
                     <button
                       id="vote-skip-button"
-                      class="btn btn-outline-warning btn-sm me-2"
+                      class="btn btn-outline-warning btn-sm mb-2"
                       onclick="voteSkip()"
                     >
                       Vote to Skip
                     </button>
-
-                    <span class="small text-secondary">
+                    <div class="small text-secondary">
                       <span id="vote-count">0</span> /
-                      <span id="required-votes">?</span> votes
-                    </span>
+                      <span id="required-votes">0</span> votes required
+                    </div>
                   </div>
                 </div>
               </div>
             </section>
 
             <!-- END GAME -->
-            <section
-              id="end-game-section"
-              class="phase-section"
-              style="display: none"
-            >
+            <section id="end-game-section" class="phase-section" style="display:none;">
               <div class="card shadow-sm mb-3">
                 <div class="card-body">
-                  <div class="text-center mb-3">
-                    <div class="display-6 mb-2">🎉 Game over! 🎉</div>
+                  <h3 class="text-center">🎉 Game Over 🎉</h3>
 
-                    <p class="small text-secondary mb-0">
-                      Final results from the game.
-                    </p>
-                  </div>
-
-                  <div class="row g-3">
-                    <!-- Top players -->
+                  <div class="row g-3 mt-3">
                     <div class="col-md-5">
-                      <h3 class="h6 mb-2">Top players</h3>
-
-                      <ul
-                        id="top-players-list"
-                        class="list-group list-group-flush small"
-                      ></ul>
+                      <h6>Top Players</h6>
+                      <div id="top-players-list"></div>
                     </div>
 
-                    <!-- Round history -->
                     <div class="col-md-7">
-                      <h3 class="h6 mb-2">Round history</h3>
-
-                      <div
-                        id="round-history-list"
-                        class="round-history-list small border rounded-3 p-2"
-                      ></div>
+                      <h6>Round History</h6>
+                      <div id="round-history-list" class="round-history-list"></div>
                     </div>
                   </div>
                 </div>
               </div>
 
-              <!-- End-game host controls -->
-              <div
-                id="end-game-host-controls"
-                class="end-game-host-controls"
-                style="display: none"
-              >
+              <div id="end-game-host-controls" style="display:none;">
                 <div class="card shadow-sm">
-                  <div
-                    class="card-body d-flex flex-wrap gap-2 justify-content-between align-items-center"
-                  >
-                    <div class="small text-secondary">
-                      Host options for this room
-                    </div>
-
-                    <div class="d-flex flex-wrap gap-2 ms-auto">
-                      <button
-                        class="btn btn-outline-secondary btn-sm"
-                        onclick="restartGame()"
-                      >
+                  <div class="card-body d-flex flex-wrap justify-content-between">
+                    <div class="small text-secondary">Host Options</div>
+                    <div class="d-flex gap-2">
+                      <button class="btn btn-outline-secondary btn-sm" onclick="restartGame()">
                         Restart
                       </button>
-
-                      <button
-                        class="btn btn-outline-danger btn-sm"
-                        onclick="destroyRoom()"
-                      >
-                        Close room
-                      </button>
-
-                      <button
-                        class="btn btn-outline-dark btn-sm"
-                        onclick="leaveRoom()"
-                      >
-                        Leave
+                      <button class="btn btn-outline-danger btn-sm" onclick="destroyRoom()">
+                        Close Room
                       </button>
                     </div>
                   </div>
@@ -580,284 +349,151 @@
       </div>
     </main>
 
-    <!-- SETTINGS MODAL (custom, JS-controlled) -->
+    <!-- SETTINGS MODAL (custom, NOT Bootstrap modal.js) -->
     <div id="settings-modal" class="td-settings-modal">
       <div class="modal-dialog modal-lg modal-dialog-centered">
         <div class="modal-content bg-body">
           <div class="modal-header">
-            <h5 class="modal-title">Game settings</h5>
-
-            <button
-              type="button"
-              class="btn-close"
-              aria-label="Close"
-              onclick="closeSettings()"
-            ></button>
+            <h5 class="modal-title">Game Settings</h5>
+            <button class="btn-close" onclick="closeSettings()"></button>
           </div>
 
           <div class="modal-body">
+            <!-- Tabs -->
             <ul class="nav nav-pills mb-3 small">
               <li class="nav-item">
-                <button
-                  class="nav-link settings-tab active"
-                  onclick="showSettingsTab('game')"
-                >
+                <button class="nav-link settings-tab active" onclick="showSettingsTab('game')">
                   Gameplay
                 </button>
               </li>
-
               <li class="nav-item">
-                <button
-                  class="nav-link settings-tab"
-                  onclick="showSettingsTab('truths')"
-                >
+                <button class="nav-link settings-tab" onclick="showSettingsTab('truths')">
                   Truths
                 </button>
               </li>
-
               <li class="nav-item">
-                <button
-                  class="nav-link settings-tab"
-                  onclick="showSettingsTab('dares')"
-                >
-                  Dares
+                <button class="nav-link settings-tab" onclick="showSettingsTab('dares')">
+                  Dares / Presets
                 </button>
               </li>
             </ul>
 
-            <!-- TAB: GAMEPLAY -->
+            <!-- GAME TAB -->
             <div id="settings-tab-game" class="settings-tab-content active">
               <div class="row g-3">
                 <div class="col-md-6">
-                  <label for="setting-countdown" class="form-label"
-                    >Countdown (s)</label
-                  >
-                  <input
-                    id="setting-countdown"
-                    class="form-control"
-                    type="number"
-                    min="3"
-                    max="30"
-                  />
+                  <label class="form-label">Countdown (3–30)</label>
+                  <input id="setting-countdown" type="number" class="form-control" />
                 </div>
 
                 <div class="col-md-6">
-                  <label for="setting-preparation" class="form-label"
-                    >Preparation (s)</label
-                  >
-                  <input
-                    id="setting-preparation"
-                    class="form-control"
-                    type="number"
-                    min="10"
-                    max="120"
-                  />
+                  <label class="form-label">Preparation (10–120)</label>
+                  <input id="setting-preparation" type="number" class="form-control" />
                 </div>
 
                 <div class="col-md-6">
-                  <label for="setting-selection" class="form-label"
-                    >Selection (s)</label
-                  >
-                  <input
-                    id="setting-selection"
-                    class="form-control"
-                    type="number"
-                    min="5"
-                    max="30"
-                  />
+                  <label class="form-label">Selection (5–30)</label>
+                  <input id="setting-selection" type="number" class="form-control" />
                 </div>
 
                 <div class="col-md-6">
-                  <label for="setting-truthdare" class="form-label"
-                    >Truth/Dare duration (s)</label
-                  >
-                  <input
-                    id="setting-truthdare"
-                    class="form-control"
-                    type="number"
-                    min="30"
-                    max="180"
-                  />
+                  <label class="form-label">Truth/Dare (30–180)</label>
+                  <input id="setting-truthdare" type="number" class="form-control" />
                 </div>
 
                 <div class="col-md-6">
-                  <label for="setting-skip" class="form-label"
-                    >Skip duration (s)</label
-                  >
-                  <input
-                    id="setting-skip"
-                    class="form-control"
-                    type="number"
-                    min="3"
-                    max="30"
-                  />
+                  <label class="form-label">Skip Duration (3–30)</label>
+                  <input id="setting-skip" type="number" class="form-control" />
                 </div>
 
                 <div class="col-md-6">
-                  <label for="setting-maxrounds" class="form-label"
-                    >Maximum rounds</label
-                  >
-                  <input
-                    id="setting-maxrounds"
-                    class="form-control"
-                    type="number"
-                    min="1"
-                    max="50"
-                  />
+                  <label class="form-label">Max Rounds (1–50)</label>
+                  <input id="setting-maxrounds" type="number" class="form-control" />
                 </div>
 
                 <div class="col-md-6">
-                  <label for="setting-minigame" class="form-label"
-                    >Minigame chance (%)</label
-                  >
-                  <input
-                    id="setting-minigame"
-                    class="form-control"
-                    type="number"
-                    min="0"
-                    max="100"
-                  />
+                  <label class="form-label">Minigame Chance (%)</label>
+                  <input id="setting-minigame" type="number" class="form-control" />
                 </div>
 
                 <div class="col-md-6">
-                  <div class="form-check mt-4 pt-2">
-                    <input
-                      id="setting-ai-generation"
-                      class="form-check-input"
-                      type="checkbox"
-                    />
-
-                    <label class="form-check-label" for="setting-ai-generation">
-                      Enable AI content generation
-                    </label>
-                  </div>
+                  <label class="form-label">AI Generation</label>
+                  <input id="setting-ai-generation" type="checkbox" />
                 </div>
               </div>
             </div>
 
-            <!-- TAB: TRUTHS -->
+            <!-- TRUTHS TAB -->
             <div id="settings-tab-truths" class="settings-tab-content">
-              <h6 class="small text-uppercase text-secondary mb-2">
-                Default truths
-              </h6>
-
-              <div
-                id="default-truths-list"
-                class="default-list small border rounded-3 p-2"
-              ></div>
+              <h6>Default Truths</h6>
+              <div id="default-truths-list" class="default-list"></div>
 
               <div class="d-flex gap-2 mt-2">
-                <button
-                  class="btn btn-outline-success btn-sm"
-                  onclick="addDefaultItem('truth')"
-                >
+                <button class="btn btn-outline-success btn-sm" onclick="addDefaultItem('truth')">
                   Add
                 </button>
-
-                <button
-                  class="btn btn-outline-primary btn-sm"
-                  onclick="editDefaultItem('truth')"
-                >
-                  Edit selected
+                <button class="btn btn-outline-primary btn-sm" onclick="editDefaultItem('truth')">
+                  Edit
                 </button>
-
-                <button
-                  class="btn btn-outline-danger btn-sm"
-                  onclick="removeDefaultItems('truth')"
-                >
-                  Remove selected
+                <button class="btn btn-outline-danger btn-sm" onclick="removeDefaultItems('truth')">
+                  Remove
                 </button>
               </div>
             </div>
 
-            <!-- TAB: DARES -->
-            <div id="settings-tab-daressfdf" class="settings-tab-content">
-              <h6 class="small text-uppercase text-secondary mb-2">
-                Default dares
-              </h6>
-
-              <div
-                id="default-dares-list"
-                class="default-list small border rounded-3 p-2"
-              ></div>
+            <!-- DARES TAB -->
+            <div id="settings-tab-dares" class="settings-tab-content">
+              <h6>Default Dares</hh6>
+              <div id="default-dares-list" class="default-list"></div>
 
               <div class="d-flex gap-2 mt-2">
-                <button
-                  class="btn btn-outline-success btn-sm"
-                  onclick="addDefaultItem('dare')"
-                >
+                <button class="btn btn-outline-success btn-sm" onclick="addDefaultItem('dare')">
                   Add
                 </button>
-
-                <button
-                  class="btn btn-outline-primary btn-sm"
-                  onclick="editDefaultItem('dare')"
-                >
-                  Edit selected
+                <button class="btn btn-outline-primary btn-sm" onclick="editDefaultItem('dare')">
+                  Edit
                 </button>
-
-                <button
-                  class="btn btn-outline-danger btn-sm"
-                  onclick="removeDefaultItems('dare')"
-                >
-                  Remove selected
+                <button class="btn btn-outline-danger btn-sm" onclick="removeDefaultItems('dare')">
+                  Remove
                 </button>
               </div>
 
               <hr />
 
-              <button
-                class="btn btn-outline-primary btn-sm mb-2"
-                onclick="triggerLoadPreset()"
-              >
-                Load preset
+              <button class="btn btn-outline-primary btn-sm" onclick="triggerLoadPreset()">
+                Load preset…
               </button>
 
-              <button
-                class="btn btn-outline-success btn-sm mb-2"
-                onclick="saveDefaultsAsPreset()"
-              >
-                Save defaults as preset
+              <button class="btn btn-outline-success btn-sm" onclick="savePreset()">
+                Export preset
               </button>
 
               <input
-                type="file"
                 id="load-preset-file"
+                type="file"
                 class="d-none"
-                accept=".json"
+                accept="application/json"
                 onchange="loadPresetFile(event)"
               />
             </div>
           </div>
 
           <div class="modal-footer">
-            <button class="btn btn-secondary" onclick="closeSettings()">
-              Close
-            </button>
-            <button class="btn btn-primary" onclick="saveSettings()">
-              Save changes
-            </button>
+            <button class="btn btn-secondary" onclick="closeSettings()">Close</button>
+            <button class="btn btn-primary" onclick="saveSettings()">Save</button>
           </div>
         </div>
       </div>
     </div>
 
-    <!-- JAVASCRIPT IMPORTS -->
-    <script
-      src="https://cdn.socket.io/4.6.1/socket.io.min.js"
-      crossorigin="anonymous"
-    ></script>
-
-    <script>
-      const ROOM_CODE = "{{ room_code }}";
-      const PLAYER_NAME = "{{ name }}";
-    </script>
-
+    <!-- Socket.io -->
+    <script src="https://cdn.socket.io/4.6.1/socket.io.min.js"></script>
     <script src="{{ url_for('static', filename='room_script.js') }}"></script>
 
+    <!-- Bootstrap Bundle -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 
-    <!-- THEME TOGGLE -->
+    <!-- Theme Toggle -->
     <script>
       (function () {
         const stored = localStorage.getItem("td-theme");
@@ -870,29 +506,21 @@
 
         function updateToggle(mode) {
           const btn = document.getElementById("theme-toggle");
-          if (!btn) return;
-
           const label = btn.querySelector(".td-theme-label");
-
-          if (mode === "dark") label.textContent = "Light mode";
-          else label.textContent = "Dark mode";
+          label.textContent = mode === "dark" ? "Light mode" : "Dark mode";
         }
 
         document.addEventListener("DOMContentLoaded", function () {
           updateToggle(initial);
-
-          document
-            .getElementById("theme-toggle")
-            .addEventListener("click", function () {
-              const current =
-                document.documentElement.getAttribute("data-bs-theme") ||
-                "dark";
-              const next = current === "dark" ? "light" : "dark";
-
-              document.documentElement.setAttribute("data-bs-theme", next);
-              localStorage.setItem("td-theme", next);
-              updateToggle(next);
-            });
+          const btn = document.getElementById("theme-toggle");
+          btn.addEventListener("click", function () {
+            const current =
+              document.documentElement.getAttribute("data-bs-theme") || "dark";
+            const next = current === "dark" ? "light" : "dark";
+            document.documentElement.setAttribute("data-bs-theme", next);
+            localStorage.setItem("td-theme", next);
+            updateToggle(next);
+          });
         });
       })();
     </script>
