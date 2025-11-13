@@ -1,88 +1,182 @@
-/* GENERAL LAYOUT */
 body {
-  font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI",
+    sans-serif;
 }
 
-/* LEFT COLUMN HIDE */
-#left-column.hidden {
+/* Lobby & game layout */
+.host-controls {
+  display: none;
+}
+
+.host-controls.show {
+  display: block;
+}
+
+/* Lobby column is entirely hidden when JS adds .hide to #lobby-section */
+#lobby-section.hide {
   display: none !important;
 }
 
-/* CENTER GAME AREA */
-#game-area.centered {
-  margin: 0 auto;
-  max-width: 900px;
+/* Center the game area on screen when visible */
+.game-area {
+  display: none;
 }
 
-/* LIST SCROLLING */
+.game-area.show {
+  display: block;
+  margin: 0 auto;
+  max-width: 960px;
+}
+
+/* Phase sections */
+.phase-section .card {
+  border-radius: 1rem;
+}
+
+.phase-section .card-body {
+  transition: background-color 0.2s ease, transform 0.15s ease;
+}
+
+.phase-section .card-body:hover {
+  transform: translateY(-1px);
+}
+
+/* Player list */
 #player-list {
   max-height: 260px;
   overflow-y: auto;
 }
 
+#player-list .player-item {
+  padding: 0.4rem 0;
+}
+
+#player-list .player-item.host {
+  font-weight: 600;
+}
+
+#player-list .host-badge {
+  margin-left: 0.25rem;
+  font-size: 0.8rem;
+  color: var(--bs-warning);
+}
+
+/* Player checkbox list */
 .player-checkbox-list {
   max-height: 220px;
   overflow-y: auto;
-  border: 1px solid rgba(108, 117, 125, 0.3);
-  border-radius: 8px;
-  padding: 6px;
+  border-radius: 0.75rem;
+  border: 1px solid rgba(108, 117, 125, 0.25);
+  padding: 0.4rem 0.6rem;
 }
 
-.player-checkbox-item {
-  padding: 4px 0;
+.player-checkbox-list .player-checkbox-item {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.25rem 0.15rem;
 }
 
-/* ROUND HISTORY */
+/* Submission success toast-like pill */
+#submission-success {
+  border-radius: 999px;
+  font-size: 0.8rem;
+}
+
+/* Challenge text styling (truth/dare body) */
+#challenge-text {
+  border-radius: 0.75rem;
+  transition: background-color 0.2s ease, color 0.2s ease,
+    border-color 0.2s ease;
+}
+
+/* Round history */
 .round-history-list {
   max-height: 260px;
   overflow-y: auto;
-  border: 1px solid rgba(108, 117, 125, 0.3);
-  padding: 6px;
-  border-radius: 8px;
 }
 
-/* DEFAULT LISTS */
-.default-list {
-  max-height: 260px;
-  overflow-y: auto;
-  border: 1px solid rgba(108, 117, 125, 0.3);
-  border-radius: 8px;
-  padding: 6px;
+.round-item {
+  padding: 0.4rem 0.3rem;
+  border-bottom: 1px dashed var(--bs-border-color);
+  font-size: 0.85rem;
 }
 
-.default-list-item {
-  padding: 6px 8px;
-  border: 1px solid transparent;
-  border-radius: 6px;
-  margin-bottom: 4px;
-  cursor: pointer;
+.round-item:last-child {
+  border-bottom: none;
 }
 
-.default-list-item.selected {
-  border-color: var(--bs-primary);
-  background: rgba(13, 110, 253, 0.1);
+.round-header {
+  font-weight: 600;
+  margin-bottom: 0.2rem;
 }
 
-/* VOTE SECTION */
-.vote-section {
-  border-top: 1px dashed var(--bs-border-color);
-  padding-top: 8px;
+.round-player {
+  font-weight: 500;
 }
 
-/* SETTINGS MODAL (CUSTOM) */
+.round-challenge {
+  font-style: italic;
+  margin: 0.1rem 0 0.2rem 0;
+}
+
+.round-submitter {
+  color: var(--bs-secondary-color);
+}
+
+/* Top players */
+#top-players-list .top-player {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.35rem 0.2rem;
+  border-bottom: 1px dashed var(--bs-border-color);
+  font-size: 0.9rem;
+}
+
+#top-players-list .top-player:last-child {
+  border-bottom: none;
+}
+
+.top-player .player-name-score {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.top-player .player-score {
+  font-weight: 600;
+}
+
+/* End game host controls */
+.end-game-host-controls .card {
+  border-radius: 0.75rem;
+}
+
+/* Settings modal: custom overlay, controlled by JS (no Bootstrap JS) */
 .td-settings-modal {
   display: none;
   position: fixed;
   inset: 0;
   background: rgba(15, 23, 42, 0.6);
-  z-index: 2000;
+  z-index: 1055;
 }
 
 .td-settings-modal.show {
-  display: flex !important;
+  display: flex;
   align-items: center;
   justify-content: center;
   padding: 1rem;
+}
+
+/* Settings tabs */
+.settings-tab {
+  cursor: pointer;
+}
+
+.settings-tab.active {
+  color: var(--bs-nav-pills-link-active-color);
+  background-color: var(--bs-nav-pills-link-active-bg);
 }
 
 .settings-tab-content {
@@ -93,21 +187,77 @@ body {
   display: block;
 }
 
-/* MINIGAME */
-#minigame-voting .border {
-  border-style: dashed !important;
-  padding: 10px;
+/* Default lists (truths & dares) */
+.default-list {
+  max-height: 260px;
+  overflow-y: auto;
 }
 
-/* RESPONSIVE TWEAKS */
+.default-list-empty {
+  text-align: center;
+  padding: 1rem;
+  font-style: italic;
+  color: var(--bs-secondary-color);
+}
+
+.default-list-item {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  justify-content: flex-start;
+  padding: 0.4rem 0.5rem;
+  border-radius: 0.5rem;
+  border: 1px solid transparent;
+  margin-bottom: 0.25rem;
+  cursor: pointer;
+  background-color: var(--bs-tertiary-bg);
+  transition: background-color 0.2s ease, border-color 0.2s ease;
+}
+
+.default-list-item input[type="checkbox"] {
+  margin-right: 0.4rem;
+}
+
+.default-list-item:hover {
+  border-color: var(--bs-border-color);
+}
+
+.default-list-item.selected {
+  border-color: var(--bs-primary);
+  background-color: rgba(13, 110, 253, 0.12);
+}
+
+/* Vote section in truth/dare phase */
+.vote-section {
+  border-top: 1px dashed var(--bs-border-color);
+  padding-top: 0.5rem;
+}
+
+/* Minigame */
+#minigame-voting .border {
+  border-style: dashed !important;
+}
+
+/* Empty list banner */
+#empty-list-banner {
+  font-size: 0.8rem;
+}
+
+/* Responsive tweaks */
 @media (max-width: 767.98px) {
   #player-list {
     max-height: 180px;
   }
+
   .player-checkbox-list {
     max-height: 160px;
   }
+
   .round-history-list {
     max-height: 200px;
+  }
+
+  .game-area.show {
+    max-width: 100%;
   }
 }
