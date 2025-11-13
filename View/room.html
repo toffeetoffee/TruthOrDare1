@@ -1,494 +1,1018 @@
 <!doctype html>
 <html lang="en" data-bs-theme="dark">
-<head>
+  <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width,initial-scale=1" />
     <title>Room {{ room_code }} – Truth or Dare</title>
 
-    <!-- Bootstrap 5 -->
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet"/>
+    <!-- Bootstrap 5.3 -->
+    <link
+      href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css"
+      rel="stylesheet"
+    />
 
-    <!-- Styles -->
-    <link rel="stylesheet" href="{{ url_for('static', filename='room_styles.css') }}" />
-</head>
-
-<body class="bg-body text-body">
-
-<!-- NAVBAR -->
-<nav class="navbar navbar-expand-lg border-bottom bg-body mb-3">
-    <div class="container-fluid">
-
-        <span class="navbar-brand fw-semibold">🎲 Truth or Dare</span>
+    <!-- Room styles (overrides & custom layout) -->
+    <link
+      rel="stylesheet"
+      href="{{ url_for('static', filename='room_styles.css') }}"
+    />
+  </head>
+  <body class="bg-body text-body">
+    <!-- Top bar -->
+    <nav class="navbar navbar-expand-lg border-bottom mb-3 bg-body">
+      <div class="container-fluid">
+        <span class="navbar-brand fw-semibold">
+          🎲 Truth or Dare
+        </span>
 
         <div class="d-none d-md-flex align-items-center gap-3 ms-auto me-3">
-            <div class="small text-secondary">
-                Room <span class="badge bg-primary-subtle text-primary-emphasis">{{ room_code }}</span>
-            </div>
-            <div class="small text-secondary">
-                You are: <span class="fw-semibold">{{ name }}</span>
-            </div>
+          <div class="small text-secondary text-nowrap">
+            Room
+            <span class="badge bg-primary-subtle text-primary-emphasis">
+              {{ room_code }}
+            </span>
+          </div>
+          <div class="small text-secondary text-nowrap">
+            You are:
+            <span class="fw-semibold">{{ name }}</span>
+          </div>
         </div>
 
         <div class="d-flex align-items-center gap-2 ms-auto">
-            <button id="theme-toggle" class="btn btn-outline-light btn-sm">
-                <span class="td-theme-label">Light mode</span>
-            </button>
-
-            <button class="btn btn-outline-danger btn-sm" onclick="leaveRoom()">
-                Leave
-            </button>
+          <button
+            type="button"
+            class="btn btn-outline-light btn-sm d-flex align-items-center gap-1"
+            id="theme-toggle"
+          >
+            <span class="td-theme-label">Light mode</span>
+          </button>
+          <button
+            type="button"
+            class="btn btn-outline-danger btn-sm"
+            onclick="leaveRoom()"
+          >
+            Leave
+          </button>
         </div>
-    </div>
-</nav>
+      </div>
+    </nav>
 
-<main class="container-fluid pb-4">
-
-<!-- GRID -->
-<div class="row g-3">
-
-    <!-- LEFT COLUMN -->
-    <div class="col-lg-4" id="left-column">
-
-        <!-- LOBBY SECTION -->
-        <section id="lobby-section">
+    <main class="container-fluid pb-4">
+      <div class="row g-3">
+        <!-- Left: Lobby / Players -->
+        <div class="col-lg-4">
+          <!-- Lobby section -->
+          <section id="lobby-section" class="lobby-section">
             <div class="card shadow-sm mb-3">
-                <div class="card-body">
-                    <h2 class="h5">Room details</h2>
-                    <p class="small text-secondary">Share this code with your friends.</p>
-                    <div class="d-flex justify-content-between">
-                        <span class="small text-secondary">Room code</span>
-                        <span class="badge bg-primary-subtle text-primary-emphasis px-3 py-2">{{ room_code }}</span>
-                    </div>
+              <div class="card-body">
+                <h2 class="h5 mb-2">Room details</h2>
+                <p class="small text-secondary mb-3">
+                  Share this code with your friends so they can join.
+                </p>
+                <div class="d-flex align-items-center justify-content-between">
+                  <div class="small text-secondary">Room code</div>
+                  <div
+                    class="badge bg-primary-subtle text-primary-emphasis fs-6 px-3 py-2"
+                  >
+                    {{ room_code }}
+                  </div>
                 </div>
+              </div>
             </div>
 
             <!-- Player list -->
             <div class="card shadow-sm mb-3">
-                <div class="card-body">
-                    <div class="d-flex justify-content-between">
-                        <h2 class="h5">Players</h2>
-                        <span class="badge bg-secondary-subtle text-secondary-emphasis">
-                            <span id="player-count">1</span> in room
-                        </span>
-                    </div>
-
-                    <ul id="player-list" class="list-group list-group-flush mt-3 small"></ul>
+              <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center">
+                  <h2 class="h5 mb-0">Players</h2>
+                  <span
+                    class="badge bg-secondary-subtle text-secondary-emphasis"
+                  >
+                    <span id="player-count">1</span>
+                    <span class="small fw-normal ms-1">in room</span>
+                  </span>
                 </div>
+                <ul
+                  id="player-list"
+                  class="list-group list-group-flush mt-3 small"
+                >
+                  <!-- Filled dynamically by room_script.js -->
+                </ul>
+              </div>
             </div>
 
             <!-- Host controls -->
-            <div id="host-controls" class="d-none">
-                <div class="card shadow-sm">
-                    <div class="card-body">
+            <div id="host-controls" class="host-controls">
+              <div class="card shadow-sm">
+                <div class="card-body">
+                  <div class="d-flex justify-content-between align-items-center mb-2">
+                    <h2 class="h6 mb-0">Host controls</h2>
+                    <span class="badge bg-warning-subtle text-warning-emphasis"
+                      >Host</span
+                    >
+                  </div>
+                  <p class="small text-secondary mb-3">
+                    Only the host sees these controls.
+                  </p>
 
-                        <div class="d-flex justify-content-between align-items-center mb-2">
-                            <h2 class="h6 mb-0">Host controls</h2>
-                            <span class="badge bg-warning-subtle text-warning-emphasis">Host</span>
-                        </div>
+                  <div class="d-grid gap-2 mb-3">
+                    <button
+                      id="start-button"
+                      type="button"
+                      class="btn btn-primary btn-sm"
+                      onclick="startGame()"
+                    >
+                      Start game
+                    </button>
+                    <button
+                      type="button"
+                      class="btn btn-outline-secondary btn-sm"
+                      onclick="openSettings()"
+                    >
+                      Game settings
+                    </button>
+                    <button
+                      type="button"
+                      class="btn btn-outline-warning btn-sm"
+                      onclick="restartGame()"
+                    >
+                      Restart game
+                    </button>
+                    <button
+                      type="button"
+                      class="btn btn-outline-danger btn-sm"
+                      onclick="destroyRoom()"
+                    >
+                      Destroy room
+                    </button>
+                  </div>
 
-                        <div class="d-grid gap-2 mb-3">
-                            <button id="start-button" class="btn btn-primary btn-sm" onclick="startGame()">Start game</button>
-                            <button class="btn btn-outline-secondary btn-sm" onclick="openSettings()">Game settings</button>
-                            <button class="btn btn-outline-warning btn-sm" onclick="restartGame()">Restart game</button>
-                            <button class="btn btn-outline-danger btn-sm" onclick="destroyRoom()">Destroy room</button>
-                        </div>
-
-                        <button class="btn btn-link text-danger p-0 small" onclick="leaveRoom()">Leave as host</button>
-                    </div>
+                  <button
+                    type="button"
+                    class="btn btn-link text-danger p-0 small"
+                    onclick="leaveRoom()"
+                  >
+                    Leave as host
+                  </button>
                 </div>
+              </div>
             </div>
+          </section>
+        </div>
 
-        </section>
-    </div>
-
-    <!-- GAME AREA -->
-    <div class="col-lg-8 mx-auto" id="game-area">
-
-        <!-- PHASE HEADER -->
-        <div class="card shadow-sm mb-3">
-            <div class="card-body d-flex flex-wrap align-items-center gap-3">
-
+        <!-- Right: Game area -->
+        <div class="col-lg-8">
+          <section id="game-area" class="game-area">
+            <!-- Phase header -->
+            <div class="card shadow-sm mb-3">
+              <div class="card-body d-flex flex-wrap gap-3 align-items-center">
                 <div>
-                    <div class="small text-secondary">Current phase</div>
-                    <div id="phase-type" class="badge rounded-pill bg-info-subtle text-info-emphasis px-3 py-2">
-                        Lobby
-                    </div>
+                  <div class="small text-secondary mb-1">Current phase</div>
+                  <div
+                    id="phase-type"
+                    class="badge rounded-pill bg-info-subtle text-info-emphasis px-3 py-2"
+                  >
+                    Lobby
+                  </div>
                 </div>
-
                 <div class="ms-auto d-flex align-items-center gap-3">
-                    <div class="small text-secondary">
-                        Time left: <span id="countdown-timer" class="fw-semibold">0</span>s
-                    </div>
-
-                    <div id="empty-list-banner" class="alert alert-warning py-1 px-3 mb-0 d-none">
-                        No more items left.
-                    </div>
+                  <div class="small text-secondary">
+                    Time left:
+                    <span
+                      id="countdown-timer"
+                      class="fw-semibold"
+                    >
+                      0
+                    </span>
+                    s
+                  </div>
+                  <div
+                    id="empty-list-banner"
+                    class="alert alert-warning py-1 px-3 mb-0 d-none"
+                  >
+                    No more items for this player. AI or skip may activate.
+                  </div>
                 </div>
+              </div>
             </div>
-        </div>
 
-        <!-- COUNTDOWN PHASE -->
-        <section id="countdown-section" style="display:none;">
-            <div class="card shadow-sm mb-3">
+            <!-- Countdown phase -->
+            <section
+              id="countdown-section"
+              class="phase-section mb-3"
+              style="display: none"
+            >
+              <div class="card shadow-sm">
                 <div class="card-body text-center">
-                    <h3 class="h5">Next round starting…</h3>
-                    <p class="small text-secondary">Get ready!</p>
-
-                    <div id="big-countdown-timer" class="display-5 fw-bold">
-                        10
-                    </div>
+                  <h3 class="h5 mb-2">Next round starting…</h3>
+                  <p class="text-secondary small mb-3">
+                    Get ready! The round will start automatically.
+                  </p>
+                  <div
+                    class="display-5 fw-bold"
+                    id="countdown-timer"
+                  >
+                    10
+                  </div>
                 </div>
-            </div>
-        </section>
+              </div>
+            </section>
 
-        <!-- PREPARATION PHASE -->
-        <section id="preparation-section" style="display:none;">
-            <div class="card shadow-sm mb-3">
+            <!-- Preparation phase -->
+            <section
+              id="preparation-section"
+              class="phase-section mb-3"
+              style="display: none"
+            >
+              <div class="card shadow-sm">
                 <div class="card-body">
+                  <div class="d-flex justify-content-between align-items-center mb-2">
+                    <h3 class="h5 mb-0">Preparation</h3>
+                    <span class="badge bg-secondary-subtle text-secondary-emphasis">
+                      <span id="prep-timer">30</span>s left
+                    </span>
+                  </div>
+                  <p class="small text-secondary mb-3">
+                    Add truths or dares for other players. You can target one or
+                    more people each submission.
+                  </p>
 
-                    <div class="d-flex justify-content-between mb-2">
-                        <h3 class="h5 mb-0">Preparation</h3>
-                        <span class="badge bg-secondary-subtle text-secondary-emphasis">
-                            <span id="prep-timer">30</span>s left
-                        </span>
+                  <!-- Toast-like submission success -->
+                  <div
+                    id="submission-success"
+                    class="alert alert-success py-2 px-3 small mb-3"
+                    style="display: none"
+                  >
+                    <!-- Filled in by JS -->
+                  </div>
+
+                  <div class="row g-3">
+                    <!-- Left: form -->
+                    <div class="col-md-7">
+                      <div class="mb-2">
+                        <label for="truth-dare-type" class="form-label"
+                          >Type</label
+                        >
+                        <select
+                          id="truth-dare-type"
+                          class="form-select form-select-sm"
+                        >
+                          <option value="truth">Truth</option>
+                          <option value="dare">Dare</option>
+                        </select>
+                      </div>
+
+                      <div class="mb-2">
+                        <label for="truth-dare-text" class="form-label"
+                          >Your prompt</label
+                        >
+                        <textarea
+                          id="truth-dare-text"
+                          class="form-control"
+                          rows="3"
+                          placeholder="Write a spicy truth or a fun dare…"
+                        ></textarea>
+                      </div>
+
+                      <button
+                        type="button"
+                        class="btn btn-success btn-sm mt-1"
+                        onclick="submitTruthDare()"
+                      >
+                        Submit
+                      </button>
                     </div>
 
-                    <div id="submission-success" class="alert alert-success small py-2 px-3" style="display:none;"></div>
-
-                    <div class="row g-3">
-
-                        <div class="col-md-7">
-                            <label for="truth-dare-type" class="form-label">Type</label>
-                            <select id="truth-dare-type" class="form-select form-select-sm">
-                                <option value="truth">Truth</option>
-                                <option value="dare">Dare</option>
-                            </select>
-
-                            <label for="truth-dare-text" class="form-label mt-2">Your prompt</label>
-                            <textarea id="truth-dare-text" class="form-control" rows="3"></textarea>
-
-                            <button class="btn btn-success btn-sm mt-2" onclick="submitTruthDare()">Submit</button>
+                    <!-- Right: choose targets -->
+                    <div class="col-md-5">
+                      <div class="d-flex justify-content-between align-items-center mb-2">
+                        <div class="form-label mb-0 small">Target players</div>
+                        <div class="small">
+                          <button
+                            type="button"
+                            class="btn btn-link btn-sm p-0 me-2"
+                            onclick="selectAllPlayers()"
+                          >
+                            Select all
+                          </button>
+                          <button
+                            type="button"
+                            class="btn btn-link btn-sm p-0"
+                            onclick="deselectAllPlayers()"
+                          >
+                            Clear
+                          </button>
                         </div>
-
-                        <div class="col-md-5">
-                            <div class="d-flex justify-content-between mb-2">
-                                <span class="form-label small">Target players</span>
-                                <div>
-                                    <button class="btn btn-link btn-sm p-0 me-2" onclick="selectAllPlayers()">All</button>
-                                    <button class="btn btn-link btn-sm p-0" onclick="deselectAllPlayers()">None</button>
-                                </div>
-                            </div>
-
-                            <div id="player-checkboxes" class="player-checkbox-list small"></div>
-                        </div>
+                      </div>
+                      <div
+                        id="player-checkboxes"
+                        class="player-checkbox-list small"
+                      >
+                        <!-- Filled dynamically -->
+                      </div>
                     </div>
-
+                  </div>
                 </div>
-            </div>
-        </section>
+              </div>
+            </section>
 
-        <!-- SELECTION PHASE -->
-        <section id="selection-section" style="display:none;">
-            <div class="card shadow-sm mb-3">
+            <!-- Selection phase -->
+            <section
+              id="selection-section"
+              class="phase-section mb-3"
+              style="display: none"
+            >
+              <div class="card shadow-sm">
                 <div class="card-body text-center">
-
-                    <h3 class="h5">Selecting player…</h3>
-                    <div id="selected-player-name" class="display-6">?</div>
-                    <div class="small text-secondary">
-                        Time left: <span id="selection-timer" class="fw-semibold">10</span>s
-                    </div>
-
+                  <h3 class="h5 mb-2">Selecting a player…</h3>
+                  <p class="small text-secondary mb-3">
+                    Everyone has an equal chance. May luck be in your favor.
+                  </p>
+                  <div class="display-6 mb-1" id="selected-player-name">
+                    ?
+                  </div>
+                  <div class="small text-secondary">
+                    Time left:
+                    <span id="selection-timer" class="fw-semibold">10</span
+                    >s
+                  </div>
                 </div>
-            </div>
-        </section>
+              </div>
+            </section>
 
-        <!-- MINIGAME PHASE -->
-        <section id="minigame-section" class="phase-section mb-3" style="display:none;">
-            <div class="card shadow-sm">
+            <!-- Minigame phase -->
+            <section
+              id="minigame-section"
+              class="phase-section mb-3"
+              style="display: none"
+            >
+              <div class="card shadow-sm">
                 <div class="card-body">
+                  <h3 class="h5 mb-2">Minigame</h3>
+                  <p
+                    id="minigame-participant-message"
+                    class="small text-secondary"
+                  >
+                    <!-- Filled dynamically -->
+                  </p>
 
-                    <h3 class="h5 minigame-title">Minigame</h3>
-                    <p class="small text-secondary minigame-description mb-3">
-                        <!-- Filled dynamically -->
-                    </p>
-
-                    <!-- Participant message (only visible to chosen participants) -->
-                    <div id="minigame-participant-message" class="alert alert-info py-2 px-3 mb-3" style="display:none;">
-                        <p class="mb-0"></p>
+                  <div
+                    id="minigame-voting"
+                    class="row g-3 align-items-center mt-2"
+                  >
+                    <div class="col-md-5">
+                      <div class="border rounded-3 p-2 text-center">
+                        <div
+                          id="participant-1"
+                          class="fw-semibold mb-1"
+                        >
+                          Player 1
+                        </div>
+                        <button
+                          id="vote-btn-1"
+                          type="button"
+                          class="btn btn-outline-success btn-sm"
+                          onclick="voteMinigame(document.getElementById('participant-1').textContent)"
+                        >
+                          Vote
+                        </button>
+                        <div class="small text-secondary mt-1">
+                          Votes:
+                          <span
+                            id="participant-1-votes"
+                            class="fw-semibold"
+                            >0</span
+                          >
+                        </div>
+                      </div>
                     </div>
 
-                    <!-- Voter instruction -->
-                    <div class="voting-instruction small mb-2">
-                        <!-- Filled dynamically -->
+                    <div class="col-md-5">
+                      <div class="border rounded-3 p-2 text-center">
+                        <div
+                          id="participant-2"
+                          class="fw-semibold mb-1"
+                        >
+                          Player 2
+                        </div>
+                          <button
+                            id="vote-btn-2"
+                            type="button"
+                            class="btn btn-outline-success btn-sm"
+                            onclick="voteMinigame(document.getElementById('participant-2').textContent)"
+                          >
+                            Vote
+                          </button>
+                        <div class="small text-secondary mt-1">
+                          Votes:
+                          <span
+                            id="participant-2-votes"
+                            class="fw-semibold"
+                            >0</span
+                          >
+                        </div>
+                      </div>
                     </div>
 
-                    <!-- Voting buttons -->
-                    <div id="minigame-voting" class="row g-3 mt-2">
-                        
-                        <div class="col-md-5">
-                            <div class="border rounded-3 p-2 text-center">
-                                <div id="participant-1" class="fw-semibold mb-1">Player 1</div>
-                                
-                                <button id="vote-btn-1" type="button" class="btn btn-outline-success btn-sm">
-                                    Vote for <span id="vote-name-1">Player 1</span>
-                                </button>
-
-                                <div class="small text-secondary mt-1">
-                                    Votes: <span id="participant-1-votes" class="fw-semibold">0</span>
-                                </div>
-                            </div>
-                        </div>
-
-                        <div class="col-md-5">
-                            <div class="border rounded-3 p-2 text-center">
-                                <div id="participant-2" class="fw-semibold mb-1">Player 2</div>
-
-                                <button id="vote-btn-2" type="button" class="btn btn-outline-success btn-sm">
-                                    Vote for <span id="vote-name-2">Player 2</span>
-                                </button>
-
-                                <div class="small text-secondary mt-1">
-                                    Votes: <span id="participant-2-votes" class="fw-semibold">0</span>
-                                </div>
-                            </div>
-                        </div>
-
-                        <div class="col-md-2 small text-secondary text-center">
-                            <div>Total votes: <span id="minigame-vote-count" class="fw-semibold">0</span></div>
-                            <div>Needed: <span id="minigame-required-votes" class="fw-semibold">0</span></div>
-                        </div>
-
+                    <div class="col-md-2">
+                      <div class="small text-secondary">
+                        Total votes:
+                        <span
+                          id="minigame-vote-count"
+                          class="fw-semibold"
+                          >0</span
+                        >
+                        <br />
+                        Needed:
+                        <span
+                          id="minigame-required-votes"
+                          class="fw-semibold"
+                          >?</span
+                        >
+                      </div>
                     </div>
+                  </div>
                 </div>
-            </div>
-        </section>
+              </div>
+            </section>
 
-
-        <!-- TRUTH/DARE PHASE -->
-        <section id="truth-dare-section" style="display:none;">
-            <div class="card shadow-sm mb-3">
+            <!-- Truth / Dare phase -->
+            <section
+              id="truth-dare-section"
+              class="phase-section mb-3"
+              style="display: none"
+            >
+              <div class="card shadow-sm">
                 <div class="card-body">
-
-                    <div class="d-flex justify-content-between align-items-center mb-3">
-                        <div>
-                            <div class="small text-secondary">Performing player</div>
-                            <div id="performing-player-name" class="fw-semibold">?</div>
-                        </div>
-
-                        <div class="small text-secondary">
-                            Time left: <span id="truth-dare-timer" class="fw-semibold">60</span>s
-                        </div>
+                  <div class="d-flex flex-wrap gap-3 align-items-center mb-3">
+                    <div>
+                      <div class="small text-secondary mb-1">
+                        Performing player
+                      </div>
+                      <div
+                        id="performing-player-name"
+                        class="fw-semibold"
+                      >
+                        ?
+                      </div>
                     </div>
-
-                    <div id="challenge-text" class="border rounded-3 p-3 bg-body-secondary mb-3">
-                        Waiting for challenge…
+                    <div class="ms-auto d-flex flex-column flex-sm-row gap-2">
+                      <div class="small text-secondary">
+                        Time left:
+                        <span
+                          id="truth-dare-timer"
+                          class="fw-semibold"
+                          >60</span
+                        >s
+                      </div>
                     </div>
+                  </div>
 
-                    <div id="truth-dare-choice" class="d-flex gap-2 mb-3" style="display:none;">
-                        <button class="btn btn-outline-info" onclick="selectTruthDare('truth')">Choose Truth</button>
-                        <button class="btn btn-outline-danger" onclick="selectTruthDare('dare')">Choose Dare</button>
+                  <div
+                    id="challenge-text"
+                    class="border rounded-3 p-3 bg-body-secondary mb-3"
+                  >
+                    Waiting for challenge…
+                  </div>
+
+                  <!-- Choice buttons (for selected player) -->
+                  <div
+                    id="truth-dare-choice"
+                    class="d-flex flex-wrap gap-2 mb-2"
+                    style="display: none"
+                  >
+                    <button
+                      type="button"
+                      class="btn btn-outline-info"
+                      onclick="selectTruthDare('truth')"
+                    >
+                      Choose Truth
+                    </button>
+                    <button
+                      type="button"
+                      class="btn btn-outline-danger"
+                      onclick="selectTruthDare('dare')"
+                    >
+                      Choose Dare
+                    </button>
+                  </div>
+
+                  <!-- After choice is made -->
+                  <div
+                    id="choice-display"
+                    class="small text-secondary mb-2"
+                  >
+                    <!-- Filled by JS -->
+                  </div>
+                  <div
+                    id="choice-made"
+                    class="small fw-semibold"
+                    style="display: none"
+                  >
+                    <!-- Filled by JS -->
+                  </div>
+
+                  <!-- Vote skip section (non-performing players) -->
+                  <div
+                    id="vote-section"
+                    class="vote-section mt-3"
+                    style="display: none"
+                  >
+                    <div class="d-flex flex-wrap align-items-center gap-2 mb-1">
+                      <button
+                        id="vote-skip-button"
+                        type="button"
+                        class="btn btn-outline-warning btn-sm"
+                        onclick="voteSkip()"
+                      >
+                        Vote to Skip
+                      </button>
+                      <div class="small text-secondary">
+                        <span id="vote-count">0</span> /
+                        <span id="required-votes">?</span>
+                        votes to skip
+                      </div>
                     </div>
-
-                    <div id="choice-display" class="small text-secondary mb-1"></div>
-                    <div id="choice-made" class="small fw-semibold" style="display:none;"></div>
-
-                    <div id="vote-section" style="display:none;">
-                        <button id="vote-skip-button" class="btn btn-outline-warning btn-sm" onclick="voteSkip()">Vote to Skip</button>
-                        <span class="small text-secondary ms-2">
-                            <span id="vote-count">0</span>/<span id="required-votes">?</span>
-                            votes to skip
-                        </span>
-                    </div>
-
+                  </div>
                 </div>
-            </div>
-        </section>
+              </div>
+            </section>
 
-        <!-- END GAME -->
-        <section id="end-game-section" style="display:none;">
-            <div class="card shadow-sm mb-3">
+            <!-- End game section -->
+            <section
+              id="end-game-section"
+              class="phase-section"
+              style="display: none"
+            >
+              <div class="card shadow-sm mb-3">
                 <div class="card-body">
-
-                    <div class="text-center mb-3">
-                        <div class="display-6">🎉 Game over! 🎉</div>
-                        <p class="small text-secondary">Final results</p>
-                    </div>
-
-                    <div class="row g-3">
-                        <div class="col-md-5">
-                            <h3 class="h6">Top players</h3>
-                            <ul id="top-players-list" class="list-group list-group-flush small"></ul>
-                        </div>
-
-                        <div class="col-md-7">
-                            <h3 class="h6">Round history</h3>
-                            <div id="round-history-list" class="round-history-list small border rounded-3 p-2"></div>
-                        </div>
-                    </div>
-
-                </div>
-            </div>
-
-            <div id="end-game-host-controls" style="display:none;">
-                <div class="card shadow-sm">
-                    <div class="card-body d-flex flex-wrap justify-content-between gap-2">
-                        <button class="btn btn-outline-secondary btn-sm" onclick="restartGame()">Restart</button>
-                        <button class="btn btn-outline-danger btn-sm" onclick="destroyRoom()">Close room</button>
-                        <button class="btn btn-outline-dark btn-sm" onclick="leaveRoom()">Leave</button>
-                    </div>
-                </div>
-            </div>
-        </section>
-
-    </div>
-</div>
-</main>
-
-
-<!-- SETTINGS MODAL -->
-<div id="settings-modal" class="td-settings-modal">
-    <div class="modal-dialog modal-lg modal-dialog-centered">
-        <div class="modal-content bg-body">
-
-            <div class="modal-header">
-                <h5 class="modal-title">Game settings</h5>
-                <button class="btn-close" onclick="closeSettings()"></button>
-            </div>
-
-            <div class="modal-body">
-
-                <!-- Tabs -->
-                <ul class="nav nav-pills mb-3 small">
-                    <li class="nav-item">
-                        <button class="nav-link settings-tab active"
-                                onclick="showSettingsTab('game')">Gameplay</button>
-                    </li>
-                    <li class="nav-item">
-                        <button class="nav-link settings-tab"
-                                onclick="showSettingsTab('truths')">Truths & Dares</button>
-                    </li>
-                    <li class="nav-item">
-                        <button class="nav-link settings-tab"
-                                onclick="showSettingsTab('dares')">Presets</button>
-                    </li>
-                </ul>
-
-                <!-- Game Tab -->
-                <div id="settings-tab-game" class="settings-tab-content active">
-                    <div class="row g-3">
-
-                        <div class="col-md-6">
-                            <label class="form-label">Countdown (s)</label>
-                            <input id="setting-countdown" type="number" min="3" max="30" class="form-control" />
-                        </div>
-
-                        <div class="col-md-6">
-                            <label class="form-label">Preparation (s)</label>
-                            <input id="setting-preparation" type="number" min="10" max="120" class="form-control" />
-                        </div>
-
-                        <div class="col-md-6">
-                            <label class="form-label">Selection (s)</label>
-                            <input id="setting-selection" type="number" min="5" max="30" class="form-control" />
-                        </div>
-
-                        <div class="col-md-6">
-                            <label class="form-label">Truth/Dare duration (s)</label>
-                            <input id="setting-truthdare" type="number" min="30" max="180" class="form-control" />
-                        </div>
-
-                        <div class="col-md-6">
-                            <label class="form-label">Skip duration (s)</label>
-                            <input id="setting-skip" type="number" min="3" max="30" class="form-control" />
-                        </div>
-
-                        <div class="col-md-6">
-                            <label class="form-label">Max rounds</label>
-                            <input id="setting-maxrounds" type="number" min="1" max="50" class="form-control" />
-                        </div>
-
-                        <div class="col-md-6">
-                            <label class="form-label">Minigame chance (%)</label>
-                            <input id="setting-minigame" type="number" min="0" max="100" class="form-control" />
-                        </div>
-
-                        <div class="col-md-6 d-flex align-items-center">
-                            <input id="setting-ai-generation" type="checkbox" class="form-check-input me-2" />
-                            <label class="form-check-label">Enable AI generation</label>
-                        </div>
-
-                    </div>
-                </div>
-
-                <!-- Truths & Dares tab -->
-                <div id="settings-tab-truths" class="settings-tab-content">
-                    <p class="small text-secondary">Manage default truth & dare lists.</p>
-
-                    <div class="row g-3">
-
-                        <div class="col-md-6">
-                            <h6 class="small">Default truths</h6>
-                            <div id="default-truths-list" class="default-list small border rounded-3 p-2"></div>
-
-                            <div class="d-flex gap-2 mt-2">
-                                <button class="btn btn-outline-success btn-sm" onclick="addDefaultItem('truth')">Add</button>
-                                <button class="btn btn-outline-primary btn-sm" onclick="editDefaultItem('truth')">Edit</button>
-                                <button class="btn btn-outline-danger btn-sm" onclick="removeDefaultItems('truth')">Remove</button>
-                            </div>
-                        </div>
-
-                        <div class="col-md-6">
-                            <h6 class="small">Default dares</h6>
-                            <div id="default-dares-list" class="default-list small border rounded-3 p-2"></div>
-
-                            <div class="d-flex gap-2 mt-2">
-                                <button class="btn btn-outline-success btn-sm" onclick="addDefaultItem('dare')">Add</button>
-                                <button class="btn btn-outline-primary btn-sm" onclick="editDefaultItem('dare')">Edit</button>
-                                <button class="btn btn-outline-danger btn-sm" onclick="removeDefaultItems('dare')">Remove</button>
-                            </div>
-                        </div>
-
-                    </div>
-                </div>
-
-                <!-- Presets tab -->
-                <div id="settings-tab-dares" class="settings-tab-content">
-                    <p class="small text-secondary">Load or save JSON presets.</p>
-
-                    <div class="d-flex gap-2 mb-3">
-                        <button class="btn btn-outline-primary btn-sm" onclick="triggerLoadPreset()">Load preset…</button>
-                        <button class="btn btn-outline-success btn-sm" onclick="saveDefaultsAsPreset()">Save defaults</button>
-                    </div>
-
-                    <input type="file" id="load-preset-file" class="d-none" accept=".json" onchange="loadPresetFile(event)" />
-
+                  <div class="text-center mb-3">
+                    <div class="display-6 mb-2">🎉 Game over! 🎉</div>
                     <p class="small text-secondary mb-0">
-                        Presets must contain: <code>truths</code> and <code>dares</code>.
+                      Here’s how everyone did this game.
                     </p>
+                  </div>
+
+                  <div class="row g-3">
+                    <div class="col-md-5">
+                      <h3 class="h6 mb-2">Top players</h3>
+                      <ul
+                        id="top-players-list"
+                        class="list-group list-group-flush small"
+                      >
+                        <!-- Filled by JS -->
+                      </ul>
+                    </div>
+                    <div class="col-md-7">
+                      <h3 class="h6 mb-2">Round history</h3>
+                      <div
+                        id="round-history-list"
+                        class="round-history-list small border rounded-3 p-2"
+                      >
+                        <!-- Filled by JS -->
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- End-game host controls -->
+              <div
+                id="end-game-host-controls"
+                class="end-game-host-controls"
+                style="display: none"
+              >
+                <div class="card shadow-sm">
+                  <div class="card-body d-flex flex-wrap gap-2 justify-content-between align-items-center">
+                    <div class="small text-secondary">
+                      Host options for this room
+                    </div>
+                    <div class="d-flex flex-wrap gap-2 ms-auto">
+                      <button
+                        type="button"
+                        class="btn btn-outline-secondary btn-sm"
+                        onclick="restartGame()"
+                      >
+                        Restart with same players
+                      </button>
+                      <button
+                        type="button"
+                        class="btn btn-outline-danger btn-sm"
+                        onclick="destroyRoom()"
+                      >
+                        Close room
+                      </button>
+                      <button
+                        type="button"
+                        class="btn btn-outline-dark btn-sm"
+                        onclick="leaveRoom()"
+                      >
+                        Leave
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </section>
+          </section>
+        </div>
+      </div>
+    </main>
+
+    <!-- Settings modal (custom, controlled by room_script.js) -->
+    <div
+      id="settings-modal"
+      class="modal td-settings-modal"
+      tabindex="-1"
+      style="display: none"
+    >
+      <div class="modal-dialog modal-lg modal-dialog-centered">
+        <div class="modal-content bg-body">
+          <div class="modal-header">
+            <h5 class="modal-title">Game settings</h5>
+            <button
+              type="button"
+              class="btn-close"
+              aria-label="Close"
+              onclick="closeSettings()"
+            ></button>
+          </div>
+          <div class="modal-body">
+            <!-- Tabs -->
+            <ul class="nav nav-pills mb-3 small" role="tablist">
+              <li class="nav-item">
+                <button
+                  type="button"
+                  class="nav-link settings-tab active"
+                  onclick="showSettingsTab('game')"
+                >
+                  Gameplay
+                </button>
+              </li>
+              <li class="nav-item">
+                <button
+                  type="button"
+                  class="nav-link settings-tab"
+                  onclick="showSettingsTab('truths')"
+                >
+                  Truth &amp; Dare lists
+                </button>
+              </li>
+              <li class="nav-item">
+                <button
+                  type="button"
+                  class="nav-link settings-tab"
+                  onclick="showSettingsTab('dares')"
+                >
+                  Defaults &amp; presets
+                </button>
+              </li>
+            </ul>
+
+            <!-- Gameplay tab -->
+            <div
+              id="settings-tab-game"
+              class="settings-tab-content active"
+            >
+              <div class="row g-3">
+                <div class="col-md-6">
+                  <label for="setting-countdown" class="form-label"
+                    >Countdown (s)</label
+                  >
+                  <input
+                    type="number"
+                    min="3"
+                    max="30"
+                    id="setting-countdown"
+                    class="form-control"
+                    value="10"
+                  />
+                  <div class="form-text small">
+                    Before each round (3–30 seconds).
+                  </div>
                 </div>
 
+                <div class="col-md-6">
+                  <label for="setting-preparation" class="form-label"
+                    >Preparation (s)</label
+                  >
+                  <input
+                    type="number"
+                    min="10"
+                    max="120"
+                    id="setting-preparation"
+                    class="form-control"
+                    value="30"
+                  />
+                  <div class="form-text small">
+                    Time to submit truths/dares (10–120 seconds).
+                  </div>
+                </div>
+
+                <div class="col-md-6">
+                  <label for="setting-selection" class="form-label"
+                    >Selection (s)</label
+                  >
+                  <input
+                    type="number"
+                    min="5"
+                    max="30"
+                    id="setting-selection"
+                    class="form-control"
+                    value="10"
+                  />
+                  <div class="form-text small">
+                    Time to show who was selected (5–30 seconds).
+                  </div>
+                </div>
+
+                <div class="col-md-6">
+                  <label for="setting-truthdare" class="form-label"
+                    >Truth/Dare duration (s)</label
+                  >
+                  <input
+                    type="number"
+                    min="30"
+                    max="180"
+                    id="setting-truthdare"
+                    class="form-control"
+                    value="60"
+                  />
+                  <div class="form-text small">
+                    Time to perform a challenge (30–180 seconds).
+                  </div>
+                </div>
+
+                <div class="col-md-6">
+                  <label for="setting-skip" class="form-label"
+                    >Skip duration (s)</label
+                  >
+                  <input
+                    type="number"
+                    min="3"
+                    max="30"
+                    id="setting-skip"
+                    class="form-control"
+                    value="5"
+                  />
+                  <div class="form-text small">
+                    Remaining time if a skip is triggered (3–30 seconds).
+                  </div>
+                </div>
+
+                <div class="col-md-6">
+                  <label for="setting-maxrounds" class="form-label"
+                    >Maximum rounds</label
+                  >
+                  <input
+                    type="number"
+                    min="1"
+                    max="50"
+                    id="setting-maxrounds"
+                    class="form-control"
+                    value="10"
+                  />
+                  <div class="form-text small">
+                    Game ends after this many rounds (1–50).
+                  </div>
+                </div>
+
+                <div class="col-md-6">
+                  <label for="setting-minigame" class="form-label"
+                    >Minigame chance (%)</label
+                  >
+                  <input
+                    type="number"
+                    min="0"
+                    max="100"
+                    id="setting-minigame"
+                    class="form-control"
+                    value="20"
+                  />
+                  <div class="form-text small">
+                    Chance that a minigame is triggered (0–100).
+                  </div>
+                </div>
+
+                <div class="col-md-6">
+                  <div class="form-check mt-4 pt-2">
+                    <input
+                      class="form-check-input"
+                      type="checkbox"
+                      id="setting-ai-generation"
+                    />
+                    <label
+                      class="form-check-label"
+                      for="setting-ai-generation"
+                    >
+                      Enable AI content generation
+                    </label>
+                    <div class="form-text small">
+                      Uses Gemini 2.0 Flash-Lite when lists are empty.
+                    </div>
+                  </div>
+                </div>
+              </div>
             </div>
 
-            <div class="modal-footer">
-                <button class="btn btn-secondary" onclick="closeSettings()">Close</button>
-                <button class="btn btn-primary" onclick="saveSettings()">Save</button>
+            <!-- Truth & Dare lists tab -->
+            <div
+              id="settings-tab-truths"
+              class="settings-tab-content"
+            >
+              <p class="small text-secondary mb-2">
+                Manage the default truth and dare lists that every player
+                starts with.
+              </p>
+
+              <div class="row g-3">
+                <div class="col-md-6">
+                  <h6 class="small text-uppercase text-secondary mb-2">
+                    Default truths
+                  </h6>
+                  <div
+                    id="default-truths-list"
+                    class="default-list small border rounded-3 p-2"
+                  ></div>
+                  <div class="d-flex gap-2 mt-2">
+                    <button
+                      type="button"
+                      class="btn btn-outline-success btn-sm"
+                      onclick="addDefaultItem('truth')"
+                    >
+                      Add
+                    </button>
+                    <button
+                      type="button"
+                      class="btn btn-outline-primary btn-sm"
+                      onclick="editDefaultItem('truth')"
+                    >
+                      Edit selected
+                    </button>
+                    <button
+                      type="button"
+                      class="btn btn-outline-danger btn-sm"
+                      onclick="removeDefaultItems('truth')"
+                    >
+                      Remove selected
+                    </button>
+                  </div>
+                </div>
+
+                <div class="col-md-6">
+                  <h6 class="small text-uppercase text-secondary mb-2">
+                    Default dares
+                  </h6>
+                  <div
+                    id="default-dares-list"
+                    class="default-list small border rounded-3 p-2"
+                  ></div>
+                  <div class="d-flex gap-2 mt-2">
+                    <button
+                      type="button"
+                      class="btn btn-outline-success btn-sm"
+                      onclick="addDefaultItem('dare')"
+                    >
+                      Add
+                    </button>
+                    <button
+                      type="button"
+                      class="btn btn-outline-primary btn-sm"
+                      onclick="editDefaultItem('dare')"
+                    >
+                      Edit selected
+                    </button>
+                    <button
+                      type="button"
+                      class="btn btn-outline-danger btn-sm"
+                      onclick="removeDefaultItems('dare')"
+                    >
+                      Remove selected
+                    </button>
+                  </div>
+                </div>
+              </div>
             </div>
 
+            <!-- Defaults & presets tab -->
+            <div
+              id="settings-tab-dares"
+              class="settings-tab-content"
+            >
+              <p class="small text-secondary mb-3">
+                Load or save JSON presets with predefined truths and dares for
+                future games.
+              </p>
+
+              <div class="d-flex flex-wrap gap-2 mb-3">
+                <button
+                  type="button"
+                  class="btn btn-outline-primary btn-sm"
+                  onclick="triggerLoadPreset()"
+                >
+                  Load preset from file…
+                </button>
+                <button
+                  type="button"
+                  class="btn btn-outline-success btn-sm"
+                  onclick="saveDefaultsAsPreset()"
+                >
+                  Save current defaults as preset
+                </button>
+              </div>
+
+              <!-- Hidden file input used by triggerLoadPreset/loadPresetFile -->
+              <input
+                type="file"
+                id="load-preset-file"
+                class="d-none"
+                accept=".json,application/json"
+                onchange="loadPresetFile(event)"
+              />
+
+              <p class="small text-secondary mb-0">
+                Preset files must contain <code>truths</code> and
+                <code>dares</code> arrays. Loading a preset replaces the current
+                defaults for all players.
+              </p>
+            </div>
+          </div>
+
+          <div class="modal-footer">
+            <button
+              type="button"
+              class="btn btn-secondary"
+              onclick="closeSettings()"
+            >
+              Close
+            </button>
+            <button
+              type="button"
+              class="btn btn-primary"
+              onclick="saveSettings()"
+            >
+              Save changes
+            </button>
+          </div>
         </div>
+      </div>
     </div>
-</div>
 
-<!-- Socket IO -->
-<script src="https://cdn.socket.io/4.6.1/socket.io.min.js"></script>
+    <!-- Socket.IO -->
+    <script
+      src="https://cdn.socket.io/4.6.1/socket.io.min.js"
+      crossorigin="anonymous"
+    ></script>
 
-<script>
-    const ROOM_CODE = "{{ room_code }}";
-    const PLAYER_NAME = "{{ name }}";
-</script>
+    <script>
+      // Pass template variables to JavaScript
+      const ROOM_CODE = "{{ room_code }}";
+      const PLAYER_NAME = "{{ name }}";
+    </script>
 
-<script src="{{ url_for('static', filename='room_script.js') }}"></script>
+    <!-- Game logic -->
+    <script src="{{ url_for('static', filename='room_script.js') }}"></script>
 
-<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+    <!-- Bootstrap bundle (optional for future components) -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 
-</body>
+    <!-- Theme toggle: same behaviour as on index.html -->
+    <script>
+      (function () {
+        const stored = localStorage.getItem("td-theme");
+        const prefersDark =
+          window.matchMedia &&
+          window.matchMedia("(prefers-color-scheme: dark)").matches;
+        const initial = stored || (prefersDark ? "dark" : "dark");
+
+        document.documentElement.setAttribute("data-bs-theme", initial);
+
+        function updateToggle(mode) {
+          const btn = document.getElementById("theme-toggle");
+          if (!btn) return;
+          const label = btn.querySelector(".td-theme-label");
+          if (mode === "dark") {
+            if (label) label.textContent = "Light mode";
+          } else {
+            if (label) label.textContent = "Dark mode";
+          }
+        }
+
+        document.addEventListener("DOMContentLoaded", function () {
+          updateToggle(initial);
+          const btn = document.getElementById("theme-toggle");
+          if (!btn) return;
+          btn.addEventListener("click", function () {
+            const current =
+              document.documentElement.getAttribute("data-bs-theme") ||
+              "dark";
+            const next = current === "dark" ? "light" : "dark";
+            document.documentElement.setAttribute("data-bs-theme", next);
+            localStorage.setItem("td-theme", next);
+            updateToggle(next);
+          });
+        });
+      })();
+    </script>
+  </body>
 </html>
