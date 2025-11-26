@@ -1,5 +1,3 @@
-# Controller/socket_events/lobby_events.py
-
 from flask_socketio import join_room, leave_room, emit
 from flask import request
 
@@ -11,55 +9,56 @@ def register_lobby_events(socketio, game_manager):
 
     @socketio.on("join")
     def on_join(data):
-        room_code = data.get("room")
-        name = data.get("name", "Anonymous")
+        try:
+            room_code = data.get("room")
+            name = data.get("name", "Anonymous")
 
-        if not room_code:
-            return
+            if not room_code:
+                return
 
-        join_room(room_code)
+            join_room(room_code)
 
-        # Add player to room
-        room = game_manager.add_player_to_room(room_code, request.sid, name)
+            room = game_manager.add_player_to_room(room_code, request.sid, name)
 
-        # Broadcast updated state
-        _broadcast_room_state(room_code, room)
+            _broadcast_room_state(room_code, room)
+        except Exception as e:
+            print(f"[ERROR] join: {e}")
 
     @socketio.on("leave")
     def on_leave(data):
-        room_code = data.get("room")
+        try:
+            room_code = data.get("room")
 
-        if not room_code:
-            return
+            if not room_code:
+                return
 
-        # Remove player
-        room = game_manager.remove_player_from_room(room_code, request.sid)
-        leave_room(room_code)
+            room = game_manager.remove_player_from_room(room_code, request.sid)
+            leave_room(room_code)
 
-        # Broadcast updated state if room still exists
-        if room:
-            _broadcast_room_state(room_code, room)
+            if room:
+                _broadcast_room_state(room_code, room)
 
-        # Notify the leaving player
-        emit("left_room", {}, to=request.sid)
+            emit("left_room", {}, to=request.sid)
+        except Exception as e:
+            print(f"[ERROR] leave: {e}")
 
     @socketio.on("destroy_room")
     def on_destroy_room(data):
-        room_code = data.get("room")
+        try:
+            room_code = data.get("room")
 
-        if not room_code:
-            return
+            if not room_code:
+                return
 
-        room = game_manager.get_room(room_code)
-        if not room:
-            return
+            room = game_manager.get_room(room_code)
+            if not room:
+                return
 
-        # Only host can destroy
-        if not room.is_host(request.sid):
-            return
+            if not room.is_host(request.sid):
+                return
 
-        # Notify all players
-        emit("room_destroyed", {}, room=room_code)
+            emit("room_destroyed", {}, room=room_code)
 
-        # Delete room
-        game_manager.delete_room(room_code)
+            game_manager.delete_room(room_code)
+        except Exception as e:
+            print(f"[ERROR] destroy_room: {e}")

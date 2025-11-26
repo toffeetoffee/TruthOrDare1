@@ -1,16 +1,15 @@
 import os
 import logging
+import threading
 from google import genai
 from typing import List, Optional
 
-# Set up logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 class AIGenerator:
     """Handles AI generation of truths and dares using Gemini API"""
     
-    # Model optimized for free tier (30 RPM)
     MODEL = "gemini-2.0-flash-lite"
     
     def __init__(self):
@@ -35,15 +34,7 @@ class AIGenerator:
             self.initialization_error = str(e)
     
     def generate_truth(self, existing_truths: List[str]) -> Optional[str]:
-        """
-        Generate a new truth question using Gemini API
-        
-        Args:
-            existing_truths: List of existing truth questions to avoid duplicates
-            
-        Returns:
-            Generated truth question or None if generation fails
-        """
+        """Generate a new truth question using Gemini API"""
         if not self.enabled or not self.client:
             logger.warning(f"Cannot generate truth - AI generator not enabled. Reason: {self.initialization_error}")
             return None
@@ -58,17 +49,14 @@ class AIGenerator:
                 config={"max_output_tokens": 256}
             )
             
-            # Validate response object
             if not response:
                 logger.error("Received empty response from Gemini API")
                 return None
             
-            # Try to get text from response - handle different response formats
             generated_text = None
             if hasattr(response, 'text'):
                 generated_text = response.text
             elif hasattr(response, 'candidates') and response.candidates:
-                # Try to get text from first candidate
                 candidate = response.candidates[0]
                 if hasattr(candidate, 'content') and hasattr(candidate.content, 'parts'):
                     parts = candidate.content.parts
@@ -81,18 +69,15 @@ class AIGenerator:
             
             generated_text = generated_text.strip()
             
-            # Validate that we actually got content
             if not generated_text or len(generated_text) < 5:
                 logger.error(f"Generated text is too short or empty: '{generated_text}'")
                 return None
             
-            # Remove quotes if present
             if generated_text.startswith('"') and generated_text.endswith('"'):
                 generated_text = generated_text[1:-1]
             if generated_text.startswith("'") and generated_text.endswith("'"):
                 generated_text = generated_text[1:-1]
             
-            # Ensure it ends with a question mark
             if not generated_text.endswith('?'):
                 generated_text += '?'
             
@@ -104,15 +89,7 @@ class AIGenerator:
             return None
     
     def generate_dare(self, existing_dares: List[str]) -> Optional[str]:
-        """
-        Generate a new dare challenge using Gemini API
-        
-        Args:
-            existing_dares: List of existing dare challenges to avoid duplicates
-            
-        Returns:
-            Generated dare challenge or None if generation fails
-        """
+        """Generate a new dare challenge using Gemini API"""
         if not self.enabled or not self.client:
             logger.warning(f"Cannot generate dare - AI generator not enabled. Reason: {self.initialization_error}")
             return None
@@ -127,17 +104,14 @@ class AIGenerator:
                 config={"max_output_tokens": 256}
             )
             
-            # Validate response object
             if not response:
                 logger.error("Received empty response from Gemini API")
                 return None
             
-            # Try to get text from response - handle different response formats
             generated_text = None
             if hasattr(response, 'text'):
                 generated_text = response.text
             elif hasattr(response, 'candidates') and response.candidates:
-                # Try to get text from first candidate
                 candidate = response.candidates[0]
                 if hasattr(candidate, 'content') and hasattr(candidate.content, 'parts'):
                     parts = candidate.content.parts
@@ -150,12 +124,10 @@ class AIGenerator:
             
             generated_text = generated_text.strip()
             
-            # Validate that we actually got content
             if not generated_text or len(generated_text) < 5:
                 logger.error(f"Generated text is too short or empty: '{generated_text}'")
                 return None
             
-            # Remove quotes if present
             if generated_text.startswith('"') and generated_text.endswith('"'):
                 generated_text = generated_text[1:-1]
             if generated_text.startswith("'") and generated_text.endswith("'"):
@@ -185,7 +157,7 @@ IMPORTANT: Output ONLY the question itself, nothing else. No explanations, no pr
         
         if existing_truths:
             prompt += "Existing truth questions (DO NOT duplicate these):\n"
-            for i, truth in enumerate(existing_truths[:30], 1):  # Limit to 30 to avoid token limits
+            for i, truth in enumerate(existing_truths[:30], 1):
                 prompt += f"{i}. {truth}\n"
             prompt += "\n"
         
@@ -212,7 +184,7 @@ IMPORTANT: Output ONLY the dare itself, nothing else. No explanations, no prefix
         
         if existing_dares:
             prompt += "Existing dares (DO NOT duplicate these):\n"
-            for i, dare in enumerate(existing_dares[:30], 1):  # Limit to 30 to avoid token limits
+            for i, dare in enumerate(existing_dares[:30], 1):
                 prompt += f"{i}. {dare}\n"
             prompt += "\n"
         
@@ -246,7 +218,6 @@ IMPORTANT: Output ONLY the dare itself, nothing else. No explanations, no prefix
                 config={"max_output_tokens": 100}
             )
             
-            # Try to extract text
             generated_text = None
             if hasattr(response, 'text'):
                 generated_text = response.text
@@ -277,12 +248,15 @@ IMPORTANT: Output ONLY the dare itself, nothing else. No explanations, no prefix
             }
 
 
-# Singleton instance
+# Thread-safe singleton with double-checked locking
 _ai_generator = None
+_ai_generator_lock = threading.Lock()
 
 def get_ai_generator():
-    """Get or create the AI generator singleton"""
+    """Get or create the AI generator singleton (thread-safe)"""
     global _ai_generator
     if _ai_generator is None:
-        _ai_generator = AIGenerator()
+        with _ai_generator_lock:
+            if _ai_generator is None:
+                _ai_generator = AIGenerator()
     return _ai_generator

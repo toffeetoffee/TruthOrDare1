@@ -1,5 +1,3 @@
-# Controller/socket_events/settings_events.py
-
 from flask_socketio import emit
 from flask import request
 
@@ -9,36 +7,38 @@ def register_settings_events(socketio, game_manager):
 
     @socketio.on("update_settings")
     def on_update_settings(data):
-        room_code = data.get("room")
-        settings = data.get("settings", {})
+        try:
+            room_code = data.get("room")
+            settings = data.get("settings", {})
 
-        if not room_code:
-            return
+            if not room_code:
+                return
 
-        room = game_manager.get_room(room_code)
-        if not room:
-            return
+            room = game_manager.get_room(room_code)
+            if not room:
+                return
 
-        # Only host can update settings
-        if not room.is_host(request.sid):
-            return
+            if not room.is_host(request.sid):
+                return
 
-        # Update settings
-        room.update_settings(settings)
+            room.update_settings(settings)
 
-        # Broadcast updated settings to all players
-        emit("settings_updated", {"settings": room.settings}, room=room_code)
+            emit("settings_updated", {"settings": room.settings}, room=room_code)
+        except Exception as e:
+            print(f"[ERROR] update_settings: {e}")
 
     @socketio.on("get_settings")
     def on_get_settings(data):
-        room_code = data.get("room")
+        try:
+            room_code = data.get("room")
 
-        if not room_code:
-            return
+            if not room_code:
+                return
 
-        room = game_manager.get_room(room_code)
-        if not room:
-            return
+            room = game_manager.get_room(room_code)
+            if not room:
+                return
 
-        # Send current settings to requester
-        emit("settings_updated", {"settings": room.settings}, to=request.sid)
+            emit("settings_updated", {"settings": room.settings}, to=request.sid)
+        except Exception as e:
+            print(f"[ERROR] get_settings: {e}")
