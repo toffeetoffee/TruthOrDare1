@@ -49,6 +49,9 @@ def register_default_list_events(socketio, game_manager):
             success = room.add_default_truth(text)
 
             if success:
+                # Update all existing players with new defaults
+                room.update_all_players_defaults()
+                
                 emit(
                     "default_lists_updated",
                     {
@@ -79,6 +82,9 @@ def register_default_list_events(socketio, game_manager):
             success = room.add_default_dare(text)
 
             if success:
+                # Update all existing players with new defaults
+                room.update_all_players_defaults()
+                
                 emit(
                     "default_lists_updated",
                     {
@@ -110,6 +116,9 @@ def register_default_list_events(socketio, game_manager):
             success = room.edit_default_truth(old_text, new_text)
 
             if success:
+                # Update all existing players with new defaults
+                room.update_all_players_defaults()
+                
                 emit(
                     "default_lists_updated",
                     {
@@ -141,6 +150,9 @@ def register_default_list_events(socketio, game_manager):
             success = room.edit_default_dare(old_text, new_text)
 
             if success:
+                # Update all existing players with new defaults
+                room.update_all_players_defaults()
+                
                 emit(
                     "default_lists_updated",
                     {
@@ -170,6 +182,9 @@ def register_default_list_events(socketio, game_manager):
 
             room.remove_default_truths(texts_to_remove)
 
+            # Update all existing players with new defaults
+            room.update_all_players_defaults()
+
             emit(
                 "default_lists_updated",
                 {
@@ -198,6 +213,9 @@ def register_default_list_events(socketio, game_manager):
                 return
 
             room.remove_default_dares(texts_to_remove)
+
+            # Update all existing players with new defaults
+            room.update_all_players_defaults()
 
             emit(
                 "default_lists_updated",
@@ -322,11 +340,8 @@ def register_default_list_events(socketio, game_manager):
                 d.strip() for d in preset["dares"] if d.strip()
             ]
 
-            for player in room.players:
-                player.truth_dare_list.set_custom_defaults(
-                    room.default_truths.copy(),
-                    room.default_dares.copy(),
-                )
+            # Update all existing players with new defaults
+            room.update_all_players_defaults()
 
             emit(
                 "default_lists_updated",

@@ -117,6 +117,15 @@ class Room:
             for t in texts_to_remove:
                 if t in self.default_dares:
                     self.default_dares.remove(t)
+                    
+    def update_all_players_defaults(self):
+        """Update all existing players with current default lists"""
+        with self._lock:
+            for player in self.players:
+                player.truth_dare_list.set_custom_defaults(
+                    self.default_truths.copy(),
+                    self.default_dares.copy()
+                )
 
     def add_ai_generated_truth(self, text):
         with self._lock:
