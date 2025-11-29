@@ -5,17 +5,16 @@ import json
 
 
 def register_default_list_events(socketio, game_manager):
-    """Register events for managing default truth/dare lists and presets."""
 
     @socketio.on("get_default_lists")
     def on_get_default_lists(data):
         try:
-            room_code = data.get("room")
+            rc = data.get("room")
 
-            if not room_code:
+            if not rc:
                 return
 
-            room = game_manager.get_room(room_code)
+            room = game_manager.get_room(rc)
             if not room:
                 return
 
@@ -33,32 +32,31 @@ def register_default_list_events(socketio, game_manager):
     @socketio.on("add_default_truth")
     def on_add_default_truth(data):
         try:
-            room_code = data.get("room")
+            rc = data.get("room")
             text = data.get("text", "").strip()
 
-            if not room_code or not text:
+            if not rc or not text:
                 return
 
-            room = game_manager.get_room(room_code)
+            room = game_manager.get_room(rc)
             if not room:
                 return
 
-            if not room.is_host(request.sid):
+            if not room.is_host(request.sid):   # only host can edit presets
                 return
 
-            success = room.add_default_truth(text)
+            ok = room.add_default_truth(text)
 
-            if success:
-                # Update all existing players with new defaults
+            if ok:
                 room.update_all_players_defaults()
-                
+
                 emit(
                     "default_lists_updated",
                     {
                         "truths": room.get_default_truths(),
                         "dares": room.get_default_dares(),
                     },
-                    room=room_code,
+                    room=rc,
                 )
         except Exception as e:
             print(f"[ERROR] add_default_truth: {e}")
@@ -66,32 +64,31 @@ def register_default_list_events(socketio, game_manager):
     @socketio.on("add_default_dare")
     def on_add_default_dare(data):
         try:
-            room_code = data.get("room")
+            rc = data.get("room")
             text = data.get("text", "").strip()
 
-            if not room_code or not text:
+            if not rc or not text:
                 return
 
-            room = game_manager.get_room(room_code)
+            room = game_manager.get_room(rc)
             if not room:
                 return
 
             if not room.is_host(request.sid):
                 return
 
-            success = room.add_default_dare(text)
+            ok = room.add_default_dare(text)
 
-            if success:
-                # Update all existing players with new defaults
+            if ok:
                 room.update_all_players_defaults()
-                
+
                 emit(
                     "default_lists_updated",
                     {
                         "truths": room.get_default_truths(),
                         "dares": room.get_default_dares(),
                     },
-                    room=room_code,
+                    room=rc,
                 )
         except Exception as e:
             print(f"[ERROR] add_default_dare: {e}")
@@ -99,33 +96,32 @@ def register_default_list_events(socketio, game_manager):
     @socketio.on("edit_default_truth")
     def on_edit_default_truth(data):
         try:
-            room_code = data.get("room")
+            rc = data.get("room")
             old_text = data.get("old_text", "").strip()
             new_text = data.get("new_text", "").strip()
 
-            if not room_code or not old_text or not new_text:
+            if not rc or not old_text or not new_text:
                 return
 
-            room = game_manager.get_room(room_code)
+            room = game_manager.get_room(rc)
             if not room:
                 return
 
             if not room.is_host(request.sid):
                 return
 
-            success = room.edit_default_truth(old_text, new_text)
+            ok = room.edit_default_truth(old_text, new_text)
 
-            if success:
-                # Update all existing players with new defaults
+            if ok:
                 room.update_all_players_defaults()
-                
+
                 emit(
                     "default_lists_updated",
                     {
                         "truths": room.get_default_truths(),
                         "dares": room.get_default_dares(),
                     },
-                    room=room_code,
+                    room=rc,
                 )
         except Exception as e:
             print(f"[ERROR] edit_default_truth: {e}")
@@ -133,33 +129,32 @@ def register_default_list_events(socketio, game_manager):
     @socketio.on("edit_default_dare")
     def on_edit_default_dare(data):
         try:
-            room_code = data.get("room")
+            rc = data.get("room")
             old_text = data.get("old_text", "").strip()
             new_text = data.get("new_text", "").strip()
 
-            if not room_code or not old_text or not new_text:
+            if not rc or not old_text or not new_text:
                 return
 
-            room = game_manager.get_room(room_code)
+            room = game_manager.get_room(rc)
             if not room:
                 return
 
             if not room.is_host(request.sid):
                 return
 
-            success = room.edit_default_dare(old_text, new_text)
+            ok = room.edit_default_dare(old_text, new_text)
 
-            if success:
-                # Update all existing players with new defaults
+            if ok:
                 room.update_all_players_defaults()
-                
+
                 emit(
                     "default_lists_updated",
                     {
                         "truths": room.get_default_truths(),
                         "dares": room.get_default_dares(),
                     },
-                    room=room_code,
+                    room=rc,
                 )
         except Exception as e:
             print(f"[ERROR] edit_default_dare: {e}")
@@ -167,22 +162,20 @@ def register_default_list_events(socketio, game_manager):
     @socketio.on("remove_default_truths")
     def on_remove_default_truths(data):
         try:
-            room_code = data.get("room")
-            texts_to_remove = data.get("texts", [])
+            rc = data.get("room")
+            to_rm = data.get("texts", [])
 
-            if not room_code or not texts_to_remove:
+            if not rc or not to_rm:
                 return
 
-            room = game_manager.get_room(room_code)
+            room = game_manager.get_room(rc)
             if not room:
                 return
 
             if not room.is_host(request.sid):
                 return
 
-            room.remove_default_truths(texts_to_remove)
-
-            # Update all existing players with new defaults
+            room.remove_default_truths(to_rm)
             room.update_all_players_defaults()
 
             emit(
@@ -191,7 +184,7 @@ def register_default_list_events(socketio, game_manager):
                     "truths": room.get_default_truths(),
                     "dares": room.get_default_dares(),
                 },
-                room=room_code,
+                room=rc,
             )
         except Exception as e:
             print(f"[ERROR] remove_default_truths: {e}")
@@ -199,22 +192,20 @@ def register_default_list_events(socketio, game_manager):
     @socketio.on("remove_default_dares")
     def on_remove_default_dares(data):
         try:
-            room_code = data.get("room")
-            texts_to_remove = data.get("texts", [])
+            rc = data.get("room")
+            to_rm = data.get("texts", [])
 
-            if not room_code or not texts_to_remove:
+            if not rc or not to_rm:
                 return
 
-            room = game_manager.get_room(room_code)
+            room = game_manager.get_room(rc)
             if not room:
                 return
 
             if not room.is_host(request.sid):
                 return
 
-            room.remove_default_dares(texts_to_remove)
-
-            # Update all existing players with new defaults
+            room.remove_default_dares(to_rm)
             room.update_all_players_defaults()
 
             emit(
@@ -223,7 +214,7 @@ def register_default_list_events(socketio, game_manager):
                     "truths": room.get_default_truths(),
                     "dares": room.get_default_dares(),
                 },
-                room=room_code,
+                room=rc,
             )
         except Exception as e:
             print(f"[ERROR] remove_default_dares: {e}")
@@ -231,10 +222,10 @@ def register_default_list_events(socketio, game_manager):
     @socketio.on("load_preset_file")
     def on_load_preset_file(data):
         try:
-            room_code = data.get("room")
-            file_data = data.get("file_data")
+            rc = data.get("room")
+            fd = data.get("file_data")
 
-            if not room_code or not file_data:
+            if not rc or not fd:
                 emit(
                     "preset_error",
                     {"message": "Invalid file data"},
@@ -242,7 +233,7 @@ def register_default_list_events(socketio, game_manager):
                 )
                 return
 
-            room = game_manager.get_room(room_code)
+            room = game_manager.get_room(rc)
             if not room:
                 emit(
                     "preset_error",
@@ -259,8 +250,8 @@ def register_default_list_events(socketio, game_manager):
                 )
                 return
 
-            # Size check for DoS protection
-            if len(file_data) > 1024 * 1024:  # 1MB limit
+            # simple size guard so people don't upload nonsense
+            if len(fd) > 1024 * 1024:
                 emit(
                     "preset_error",
                     {"message": "File too large (max 1MB)"},
@@ -268,7 +259,7 @@ def register_default_list_events(socketio, game_manager):
                 )
                 return
 
-            preset = json.loads(file_data)
+            preset = json.loads(fd)
 
             if "truths" not in preset or "dares" not in preset:
                 emit(
@@ -292,7 +283,6 @@ def register_default_list_events(socketio, game_manager):
                 )
                 return
 
-            # Validate counts
             if len(preset["truths"]) > 1000 or len(preset["dares"]) > 1000:
                 emit(
                     "preset_error",
@@ -301,8 +291,8 @@ def register_default_list_events(socketio, game_manager):
                 )
                 return
 
-            for truth in preset["truths"]:
-                if not isinstance(truth, str):
+            for t in preset["truths"]:
+                if not isinstance(t, str):
                     emit(
                         "preset_error",
                         {
@@ -312,8 +302,8 @@ def register_default_list_events(socketio, game_manager):
                     )
                     return
 
-            for dare in preset["dares"]:
-                if not isinstance(dare, str):
+            for d in preset["dares"]:
+                if not isinstance(d, str):
                     emit(
                         "preset_error",
                         {
@@ -340,7 +330,6 @@ def register_default_list_events(socketio, game_manager):
                 d.strip() for d in preset["dares"] if d.strip()
             ]
 
-            # Update all existing players with new defaults
             room.update_all_players_defaults()
 
             emit(
@@ -349,7 +338,7 @@ def register_default_list_events(socketio, game_manager):
                     "truths": room.get_default_truths(),
                     "dares": room.get_default_dares(),
                 },
-                room=room_code,
+                room=rc,
             )
 
             emit(

@@ -4,14 +4,13 @@ from .helpers import _broadcast_room_state
 
 
 def register_disconnect_events(socketio, game_manager):
-    """Register disconnection handling events."""
 
     @socketio.on("disconnect")
     def on_disconnect():
         try:
-            updated_rooms = game_manager.remove_player_from_all_rooms(request.sid)
+            updated = game_manager.remove_player_from_all_rooms(request.sid)
 
-            for room_code in updated_rooms:
+            for room_code in updated:
                 room = game_manager.get_room(room_code)
                 if room:
                     _broadcast_room_state(room_code, room)

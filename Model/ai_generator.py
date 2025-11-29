@@ -1,148 +1,149 @@
 import os
 import logging
 import threading
-from google import genai
 from typing import List, Optional
+
+from google import genai
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
+
 class AIGenerator:
-    """Handles AI generation of truths and dares using Gemini API"""
-    
     MODEL = "gemini-2.0-flash-lite"
-    
+
     def __init__(self):
-        """Initialize Gemini API client with API key from environment"""
         api_key = os.environ.get('GEMINI_API_KEY')
         if not api_key:
-            logger.warning("GEMINI_API_KEY not found in environment variables - AI generation will be disabled")
+            logger.warning("GEMINI_API_KEY not found in env -> AI off")
             self.enabled = False
             self.client = None
             self.initialization_error = "API key not configured"
             return
-        
+
         try:
             self.client = genai.Client(api_key=api_key)
             self.enabled = True
             self.initialization_error = None
-            logger.info(f"Gemini AI initialized successfully with model: {self.MODEL}")
+            logger.info(f"Gemini AI init ok, model={self.MODEL}")
         except Exception as e:
             logger.error(f"Error initializing Gemini AI: {e}", exc_info=True)
             self.enabled = False
             self.client = None
             self.initialization_error = str(e)
-    
+
     def generate_truth(self, existing_truths: List[str]) -> Optional[str]:
-        """Generate a new truth question using Gemini API"""
         if not self.enabled or not self.client:
-            logger.warning(f"Cannot generate truth - AI generator not enabled. Reason: {self.initialization_error}")
+            logger.warning(
+                f"Cannot generate truth - AI off. Reason: {self.initialization_error}"
+            )
             return None
-        
-        prompt = self._build_truth_prompt(existing_truths)
-        logger.info(f"Generating truth with {len(existing_truths)} existing truths as context")
-        
+
+        prompt = self._truth_prompt(existing_truths)
+        logger.info(f"Generating truth with {len(existing_truths)} existing truths")
+
         try:
-            response = self.client.models.generate_content(
+            resp = self.client.models.generate_content(
                 model=self.MODEL,
                 contents=prompt,
                 config={"max_output_tokens": 256}
             )
-            
-            if not response:
-                logger.error("Received empty response from Gemini API")
+
+            if not resp:
+                logger.error("Empty response from Gemini API")
                 return None
-            
-            generated_text = None
-            if hasattr(response, 'text'):
-                generated_text = response.text
-            elif hasattr(response, 'candidates') and response.candidates:
-                candidate = response.candidates[0]
-                if hasattr(candidate, 'content') and hasattr(candidate.content, 'parts'):
-                    parts = candidate.content.parts
+
+            txt = None
+            if hasattr(resp, 'text'):
+                txt = resp.text
+            elif hasattr(resp, 'candidates') and resp.candidates:
+                c = resp.candidates[0]
+                if hasattr(c, 'content') and hasattr(c.content, 'parts'):
+                    parts = c.content.parts
                     if parts and hasattr(parts[0], 'text'):
-                        generated_text = parts[0].text
-            
-            if not generated_text:
-                logger.error(f"Could not extract text from response. Response type: {type(response)}, Response: {response}")
+                        txt = parts[0].text
+
+            if not txt:
+                logger.error(f"Could not extract text from response: {type(resp)} {resp}")
                 return None
-            
-            generated_text = generated_text.strip()
-            
-            if not generated_text or len(generated_text) < 5:
-                logger.error(f"Generated text is too short or empty: '{generated_text}'")
+
+            txt = txt.strip()
+
+            if not txt or len(txt) < 5:
+                logger.error(f"Generated truth too short/empty: '{txt}'")
                 return None
-            
-            if generated_text.startswith('"') and generated_text.endswith('"'):
-                generated_text = generated_text[1:-1]
-            if generated_text.startswith("'") and generated_text.endswith("'"):
-                generated_text = generated_text[1:-1]
-            
-            if not generated_text.endswith('?'):
-                generated_text += '?'
-            
-            logger.info(f"Successfully generated truth: '{generated_text[:50]}...'")
-            return generated_text
-            
+
+            if txt.startswith('"') and txt.endswith('"'):
+                txt = txt[1:-1]
+            if txt.startswith("'") and txt.endswith("'"):
+                txt = txt[1:-1]
+
+            if not txt.endswith('?') :
+                txt += '?'
+
+            logger.info(f"Generated truth ok: '{txt[:50]}...'")
+            return txt
+
         except Exception as e:
             logger.error(f"Error generating truth: {e}", exc_info=True)
             return None
-    
+
     def generate_dare(self, existing_dares: List[str]) -> Optional[str]:
-        """Generate a new dare challenge using Gemini API"""
         if not self.enabled or not self.client:
-            logger.warning(f"Cannot generate dare - AI generator not enabled. Reason: {self.initialization_error}")
+            logger.warning(
+                f"Cannot generate dare - AI off. Reason: {self.initialization_error}"
+            )
             return None
-        
-        prompt = self._build_dare_prompt(existing_dares)
-        logger.info(f"Generating dare with {len(existing_dares)} existing dares as context")
-        
+
+        prompt = self._dare_prompt(existing_dares)
+        logger.info(f"Generating dare with {len(existing_dares)} existing dares")
+
         try:
-            response = self.client.models.generate_content(
+            resp = self.client.models.generate_content(
                 model=self.MODEL,
                 contents=prompt,
                 config={"max_output_tokens": 256}
             )
-            
-            if not response:
-                logger.error("Received empty response from Gemini API")
+
+            if not resp:
+                logger.error("Empty response from Gemini API")
                 return None
-            
-            generated_text = None
-            if hasattr(response, 'text'):
-                generated_text = response.text
-            elif hasattr(response, 'candidates') and response.candidates:
-                candidate = response.candidates[0]
-                if hasattr(candidate, 'content') and hasattr(candidate.content, 'parts'):
-                    parts = candidate.content.parts
+
+            txt = None
+            if hasattr(resp, 'text'):
+                txt = resp.text
+            elif hasattr(resp, 'candidates') and resp.candidates:
+                c = resp.candidates[0]
+                if hasattr(c, 'content') and hasattr(c.content, 'parts'):
+                    parts = c.content.parts
                     if parts and hasattr(parts[0], 'text'):
-                        generated_text = parts[0].text
-            
-            if not generated_text:
-                logger.error(f"Could not extract text from response. Response type: {type(response)}, Response: {response}")
+                        txt = parts[0].text
+
+            if not txt:
+                logger.error(f"Could not extract dare text from response: {type(resp)}")
                 return None
-            
-            generated_text = generated_text.strip()
-            
-            if not generated_text or len(generated_text) < 5:
-                logger.error(f"Generated text is too short or empty: '{generated_text}'")
+
+            txt = txt.strip()
+
+            if not txt or len(txt) < 5:
+                logger.error(f"Generated dare too short/empty: '{txt}'")
                 return None
-            
-            if generated_text.startswith('"') and generated_text.endswith('"'):
-                generated_text = generated_text[1:-1]
-            if generated_text.startswith("'") and generated_text.endswith("'"):
-                generated_text = generated_text[1:-1]
-            
-            logger.info(f"Successfully generated dare: '{generated_text[:50]}...'")
-            return generated_text
-            
+
+            if txt.startswith('"') and txt.endswith('"'):
+                txt = txt[1:-1]
+            if txt.startswith("'") and txt.endswith("'"):
+                txt = txt[1:-1]
+
+            logger.info(f"Generated dare ok: '{txt[:50]}...'")
+            return txt
+
         except Exception as e:
             logger.error(f"Error generating dare: {e}", exc_info=True)
             return None
-    
-    def _build_truth_prompt(self, existing_truths: List[str]) -> str:
-        """Build prompt for truth generation"""
-        prompt = """You are helping generate questions for a Truth or Dare party game.
+
+    def _truth_prompt(self, existing_truths: List[str]) -> str:
+        # bit long but easier to just keep it as one big string
+        p = """You are helping generate questions for a Truth or Dare party game.
 
 Generate ONE new truth question that is:
 - Appropriate for teenagers and young adults (ages 13-25)
@@ -154,20 +155,17 @@ Generate ONE new truth question that is:
 IMPORTANT: Output ONLY the question itself, nothing else. No explanations, no prefixes, just the question.
 
 """
-        
         if existing_truths:
-            prompt += "Existing truth questions (DO NOT duplicate these):\n"
-            for i, truth in enumerate(existing_truths[:30], 1):
-                prompt += f"{i}. {truth}\n"
-            prompt += "\n"
-        
-        prompt += "Generate ONE new, unique truth question now:"
-        
-        return prompt
-    
-    def _build_dare_prompt(self, existing_dares: List[str]) -> str:
-        """Build prompt for dare generation"""
-        prompt = """You are helping generate dares for a Truth or Dare party game.
+            p += "Existing truth questions (DO NOT duplicate these):\n"
+            for i, t in enumerate(existing_truths[:30], 1):
+                p += f"{i}. {t}\n"
+            p += "\n"
+
+        p += "Generate ONE new, unique truth question now:"
+        return p
+
+    def _dare_prompt(self, existing_dares: List[str]) -> str:
+        p = """You are helping generate dares for a Truth or Dare party game.
 
 Generate ONE new dare that is:
 - Appropriate for teenagers and young adults (ages 13-25)
@@ -181,79 +179,66 @@ Generate ONE new dare that is:
 IMPORTANT: Output ONLY the dare itself, nothing else. No explanations, no prefixes, just the dare action.
 
 """
-        
         if existing_dares:
-            prompt += "Existing dares (DO NOT duplicate these):\n"
-            for i, dare in enumerate(existing_dares[:30], 1):
-                prompt += f"{i}. {dare}\n"
-            prompt += "\n"
-        
-        prompt += "Generate ONE new, unique dare now:"
-        
-        return prompt
-    
+            p += "Existing dares (DO NOT duplicate these):\n"
+            for i, d in enumerate(existing_dares[:30], 1):
+                p += f"{i}. {d}\n"
+            p += "\n"
+
+        p += "Generate ONE new, unique dare now:"
+        return p
+
     def get_status(self) -> dict:
-        """Get the current status of the AI generator"""
         return {
-            'enabled': self.enabled,
-            'model': self.MODEL,
-            'initialization_error': self.initialization_error,
-            'has_client': self.client is not None,
-            'api_key_configured': os.environ.get('GEMINI_API_KEY') is not None
+            "enabled": self.enabled,
+            "model": self.MODEL,
+            "initialization_error": self.initialization_error,
+            "has_client": self.client is not None,
+            "api_key_configured": os.environ.get("GEMINI_API_KEY") is not None
         }
-    
+
     def test_generation(self) -> dict:
-        """Test the AI generation with a simple request"""
         if not self.enabled or not self.client:
             return {
-                'success': False,
-                'error': f'AI generator not enabled: {self.initialization_error}'
+                "success": False,
+                "error": f"AI generator not enabled: {self.initialization_error}"
             }
-        
+
         try:
             logger.info("Running AI generation test...")
-            response = self.client.models.generate_content(
+            resp = self.client.models.generate_content(
                 model=self.MODEL,
                 contents="Generate a simple truth question for a party game.",
                 config={"max_output_tokens": 100}
             )
-            
-            generated_text = None
-            if hasattr(response, 'text'):
-                generated_text = response.text
-            elif hasattr(response, 'candidates') and response.candidates:
-                candidate = response.candidates[0]
-                if hasattr(candidate, 'content') and hasattr(candidate.content, 'parts'):
-                    parts = candidate.content.parts
+
+            txt = None
+            if hasattr(resp, 'text'):
+                txt = resp.text
+            elif hasattr(resp, 'candidates') and resp.candidates:
+                c = resp.candidates[0]
+                if hasattr(c, 'content') and hasattr(c.content, 'parts'):
+                    parts = c.content.parts
                     if parts and hasattr(parts[0], 'text'):
-                        generated_text = parts[0].text
-            
-            if generated_text:
-                logger.info(f"AI generation test successful: '{generated_text[:50]}...'")
-                return {
-                    'success': True,
-                    'sample_output': generated_text.strip()
-                }
+                        txt = parts[0].text
+
+            if txt:
+                logger.info(f"AI test ok: '{txt[:50]}...'")
+                return {"success": True, "sample_output": txt.strip()}
             else:
-                logger.error(f"AI generation test failed - no text in response")
-                return {
-                    'success': False,
-                    'error': 'No text in API response'
-                }
+                logger.error("AI test failed - no text")
+                return {"success": False, "error": "No text in API response"}
+
         except Exception as e:
-            logger.error(f"AI generation test failed: {e}", exc_info=True)
-            return {
-                'success': False,
-                'error': str(e)
-            }
+            logger.error(f"AI test failed: {e}", exc_info=True)
+            return {"success": False, "error": str(e)}
 
 
-# Thread-safe singleton with double-checked locking
 _ai_generator = None
 _ai_generator_lock = threading.Lock()
 
+
 def get_ai_generator():
-    """Get or create the AI generator singleton (thread-safe)"""
     global _ai_generator
     if _ai_generator is None:
         with _ai_generator_lock:

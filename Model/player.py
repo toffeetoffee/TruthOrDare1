@@ -4,27 +4,24 @@ from Model.truth_dare_list import TruthDareList
 from Model.scoring_system import ScoringSystem
 
 
-def _normalize_text(text: str) -> str:
-    """Normalize text for consistent duplicate checking."""
+def _norm_txt(text: str) -> str:
     return re.sub(r'[^a-z0-9]+', '', text.strip().lower())
 
 
 class Player:
-    """Represents a player in the game with thread-safe operations."""
-
     def __init__(self, socket_id, name):
         self.socket_id = socket_id
         self.name = name
         self.truth_dare_list = TruthDareList()
         self.score = 0
-        self.submissions_this_round = 0
+        self.submissions_this_round=0
         self._lock = threading.RLock()
 
-        # Track used truths/dares to prevent AI from generating duplicates
+        # keep track so AI doesn't repeat stuff
         self.used_truths = []
         self.used_dares = []
-        self._used_truths_normalized = set()
-        self._used_dares_normalized = set()
+        self._used_truths_norm = set()
+        self._used_dares_norm = set()
 
     def add_score(self, points):
         with self._lock:
@@ -41,40 +38,39 @@ class Player:
     def can_submit_more(self):
         with self._lock:
             return self.submissions_this_round < ScoringSystem.MAX_SUBMISSIONS_PER_ROUND
-    
+
     def try_submit(self):
-        """Atomically check and increment submission counter. Returns True if submission allowed."""
+        # check+increase in one go so it's safe with threads
         with self._lock:
             if self.submissions_this_round < ScoringSystem.MAX_SUBMISSIONS_PER_ROUND:
                 self.submissions_this_round += 1
                 return True
             return False
 
-    def mark_truth_used(self, truth_text):
+    def mark_truth_used(self, txt):
         with self._lock:
-            if not truth_text:
+            if not txt: return
+            n = _norm_txt(txt)
+            if n not in self._used_truths_norm:
+                self.used_truths.append(txt)
+                self._used_truths_norm.add(n)
+
+    def mark_dare_used(self, txt):
+        with self._lock:
+            if not txt:
                 return
-            norm = _normalize_text(truth_text)
-            if norm not in self._used_truths_normalized:
-                self.used_truths.append(truth_text)
-                self._used_truths_normalized.add(norm)
+            n = _norm_txt(txt)
+            if n not in self._used_dares_norm:
+                self.used_dares.append(txt)
+                self._used_dares_norm.add(n)
 
-    def mark_dare_used(self, dare_text):
+    def has_used_truth(self, txt):
         with self._lock:
-            if not dare_text:
-                return
-            norm = _normalize_text(dare_text)
-            if norm not in self._used_dares_normalized:
-                self.used_dares.append(dare_text)
-                self._used_dares_normalized.add(norm)
+            return _norm_txt(txt) in self._used_truths_norm
 
-    def has_used_truth(self, text):
+    def has_used_dare(self, txt):
         with self._lock:
-            return _normalize_text(text) in self._used_truths_normalized
-
-    def has_used_dare(self, text):
-        with self._lock:
-            return _normalize_text(text) in self._used_dares_normalized
+            return _norm_txt(txt) in self._used_dares_norm
 
     def get_all_used_truths(self):
         with self._lock:
@@ -94,7 +90,7 @@ class Player:
 
     @staticmethod
     def from_dict(data):
-        player = Player(data["sid"], data["name"])
+        p = Player(data["sid"], data["name"])
         if "score" in data:
-            player.score = data["score"]
-        return player
+            p.score = data["score"]
+        return p

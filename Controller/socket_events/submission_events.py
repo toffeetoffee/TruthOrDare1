@@ -5,20 +5,19 @@ from Model.scoring_system import ScoringSystem
 
 
 def register_submission_events(socketio, game_manager):
-    """Register events related to player submissions of truths/dares."""
 
     @socketio.on("submit_truth_dare")
     def on_submit_truth_dare(data):
         try:
-            room_code = data.get("room")
+            rc = data.get("room")
             text = data.get("text", "").strip()
             item_type = data.get("type")
-            target_names = data.get("targets", [])
+            targets = data.get("targets", [])
 
-            if not room_code or not text or not item_type or not target_names:
+            if not rc or not text or not item_type or not targets:
                 return
 
-            room = game_manager.get_room(room_code)
+            room = game_manager.get_room(rc)
             if not room:
                 return
 
@@ -29,7 +28,7 @@ def register_submission_events(socketio, game_manager):
             if not submitter:
                 return
 
-            # Atomic check and increment
+            # per-round limit, done atomically
             if not submitter.try_submit():
                 emit(
                     "submission_error",
@@ -44,21 +43,21 @@ def register_submission_events(socketio, game_manager):
                 )
                 return
 
-            successfully_added = []
-            for target_name in target_names:
-                target_player = room.get_player_by_name(target_name)
-                if target_player:
+            ok_targets = []
+            for name in targets:
+                target = room.get_player_by_name(name)
+                if target:
                     if item_type == "truth":
-                        target_player.truth_dare_list.add_truth(
+                        target.truth_dare_list.add_truth(
                             text, submitted_by=submitter.name
                         )
                     elif item_type == "dare":
-                        target_player.truth_dare_list.add_dare(
+                        target.truth_dare_list.add_dare(
                             text, submitted_by=submitter.name
                         )
-                    successfully_added.append(target_name)
+                    ok_targets.append(name)
 
-            if successfully_added:
+            if ok_targets:
                 ScoringSystem.award_submission_points(submitter)
 
                 emit(
@@ -66,7 +65,7 @@ def register_submission_events(socketio, game_manager):
                     {
                         "text": text,
                         "type": item_type,
-                        "targets": successfully_added,
+                        "targets": ok_targets,
                     },
                     to=request.sid,
                 )

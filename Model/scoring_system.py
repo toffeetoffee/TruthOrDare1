@@ -1,13 +1,9 @@
 class ScoringSystem:
-    """Defines scoring rules and point values"""
-    
-    # Point values (highest to lowest)
     POINTS_PERFORM = 100  # Performing a truth/dare
     POINTS_MINIGAME_PARTICIPATE = 75  # Participating in a minigame
     POINTS_SUBMITTED_PERFORMED = 50  # Your submission gets performed
     POINTS_SUBMISSION = 10  # Submitting a truth/dare
     
-    # Limits
     MAX_SUBMISSIONS_PER_ROUND = 3  # Max submissions per player per round
     
     @staticmethod

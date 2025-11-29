@@ -6,14 +6,11 @@ from Model.player import Player
 from Model.game_state import GameState
 
 
-def _normalize_text(text: str) -> str:
-    """Normalize text for strict duplicate comparison."""
+def _norm(text: str) -> str:
     return re.sub(r"[^a-z0-9]+", "", text.strip().lower())
 
 
 class Room:
-    """Represents a game room with thread-safe operations"""
-
     def __init__(self, code):
         self.code = code
         self.host_sid = None
@@ -22,18 +19,18 @@ class Room:
         self.round_history = []
         self._lock = threading.RLock()
 
-        # Default truths/dares for this room
+        # defaults for this room only
         self.default_truths = []
         self.default_dares = []
-        self._load_default_lists()
+        self._load_defs()
 
-        # AI-generated tracking
+        # AI generated stuff for this room
         self.ai_generated_truths = []
         self.ai_generated_dares = []
-        self._ai_generated_truths_normalized = set()
-        self._ai_generated_dares_normalized = set()
+        self._ai_truths_norm = set()
+        self._ai_dares_norm = set()
 
-        # Configurable game settings
+        # basic game config, can be tweaked from UI
         self.settings = {
             "countdown_duration": 10,
             "preparation_duration": 30,
@@ -45,7 +42,8 @@ class Room:
             "ai_generation_enabled": True,
         }
 
-    def _load_default_lists(self):
+    def _load_defs(self):
+        #load from json, fallback if missing
         try:
             current_dir = os.path.dirname(os.path.abspath(__file__))
             parent_dir = os.path.dirname(current_dir)
@@ -117,30 +115,30 @@ class Room:
             for t in texts_to_remove:
                 if t in self.default_dares:
                     self.default_dares.remove(t)
-                    
+
     def update_all_players_defaults(self):
-        """Update all existing players with current default lists"""
+        # sync new defaults to everyone already in the room
         with self._lock:
-            for player in self.players:
-                player.truth_dare_list.set_custom_defaults(
+            for p in self.players:
+                p.truth_dare_list.set_custom_defaults(
                     self.default_truths.copy(),
                     self.default_dares.copy()
                 )
 
     def add_ai_generated_truth(self, text):
         with self._lock:
-            norm = _normalize_text(text)
-            if norm not in self._ai_generated_truths_normalized:
-                self._ai_generated_truths_normalized.add(norm)
+            n = _norm(text)
+            if n not in self._ai_truths_norm:
+                self._ai_truths_norm.add(n)
                 self.ai_generated_truths.append(text)
                 return True
             return False
 
     def add_ai_generated_dare(self, text):
         with self._lock:
-            norm = _normalize_text(text)
-            if norm not in self._ai_generated_dares_normalized:
-                self._ai_generated_dares_normalized.add(norm)
+            n = _norm(text)
+            if n not in self._ai_dares_norm:
+                self._ai_dares_norm.add(n)
                 self.ai_generated_dares.append(text)
                 return True
             return False
@@ -162,6 +160,7 @@ class Room:
             return all_dares
 
     def update_settings(self, new_settings):
+        # note: also updates game_state.max_rounds separately
         with self._lock:
             for k, v in new_settings.items():
                 if k in self.settings:
@@ -169,11 +168,12 @@ class Room:
             if "max_rounds" in new_settings:
                 self.game_state.max_rounds = int(new_settings["max_rounds"])
 
-    def add_player(self, player):
+    def add_player(self, player: Player):
         with self._lock:
             if not any(p.socket_id == player.socket_id for p in self.players):
                 player.truth_dare_list.set_custom_defaults(
-                    self.default_truths.copy(), self.default_dares.copy()
+                    self.default_truths.copy(),
+                    self.default_dares.copy()
                 )
                 self.players.append(player)
             if self.host_sid is None:
@@ -215,10 +215,11 @@ class Room:
 
     def get_top_players(self, n=5):
         with self._lock:
-            sorted_players = sorted(self.players, key=lambda p: p.score, reverse=True)
-            return [{"name": p.name, "score": p.score} for p in sorted_players[:n]]
+            s = sorted(self.players, key=lambda p: p.score, reverse=True)
+            return [{"name": p.name, "score": p.score} for p in s[:n]]
 
     def reset_for_new_game(self):
+        # basically reset scores + lists but keep room
         with self._lock:
             for p in self.players:
                 p.score = 0
@@ -226,7 +227,8 @@ class Room:
                 p.used_truths = []
                 p.used_dares = []
                 p.truth_dare_list.set_custom_defaults(
-                    self.default_truths.copy(), self.default_dares.copy()
+                    self.default_truths.copy(),
+                    self.default_dares.copy()
                 )
             self.round_history = []
             self.game_state.reset_for_new_game()

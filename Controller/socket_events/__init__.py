@@ -1,9 +1,3 @@
-# Controller/socket_events/__init__.py
-"""
-Main entry point for all Socket.IO event registrations.
-Ensures all submodules share the same socketio and game_manager instances.
-"""
-
 from .helpers import (
     init_socket_helpers,
     start_selection_or_minigame,
@@ -20,11 +14,7 @@ from .disconnect_events import register_disconnect_events
 
 
 def register_socket_events(socketio, game_manager):
-    """
-    Called once from app.py.
-    Injects the shared socketio and game_manager into helper globals,
-    then registers all event modules.
-    """
+    
     print(f"[SOCKET_INIT] Using shared GameManager id={id(game_manager)}")
     init_socket_helpers(socketio, game_manager)
 

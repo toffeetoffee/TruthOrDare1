@@ -5,35 +5,34 @@ from Model.ai_generator import get_ai_generator
 
 
 def register_ai_events(socketio, game_manager):
-    """Register events related to AI generator status and debugging."""
 
     @socketio.on("check_ai_status")
     def on_check_ai_status(data):
         try:
-            room_code = data.get("room")
+            rc = data.get("room")
 
-            if not room_code:
+            if not rc:  # no room
                 return
 
-            room = game_manager.get_room(room_code)
+            room = game_manager.get_room(rc)
             if not room:
                 return
 
-            if not room.is_host(request.sid):
+            if not room.is_host(request.sid):  # host only
                 return
 
             ai_gen = get_ai_generator()
             status = ai_gen.get_status()
 
-            test_result = None
+            test_res = None
             if data.get("run_test", False):
-                test_result = ai_gen.test_generation()
+                test_res = ai_gen.test_generation()
 
             emit(
                 "ai_status_result",
                 {
                     "status": status,
-                    "test_result": test_result,
+                    "test_result": test_res,
                     "room_ai_enabled": room.settings.get(
                         "ai_generation_enabled", False
                     ),
