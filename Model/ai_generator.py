@@ -10,7 +10,7 @@ logger = logging.getLogger(__name__)
 
 
 class AIGenerator:
-    MODEL = "gemini-1.5-flash"
+    MODEL = "gemini-2.0-flash-lite"
 
     def __init__(self):
         api_key = os.environ.get('GEMINI_API_KEY')
