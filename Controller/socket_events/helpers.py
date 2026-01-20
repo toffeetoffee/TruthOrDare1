@@ -25,6 +25,7 @@ def init_socket_helpers(socketio, game_manager):
 
 
 def _clean_text(txt):
+    """Normalize text for duplicate comparison"""
     return re.sub(r"[^a-z0-9]+", "", txt.strip().lower())
 
 
@@ -47,10 +48,10 @@ def _broadcast_room_state(code, room_obj):
 
 def start_selection_or_minigame(room_code):
     if not _game_mgr:
-        logger.warning("Game manager not available — skipping selection/minigame.")
+        logger.warning("Game manager not available – skipping selection/minigame.")
         return
     if not _socketio:
-        logger.warning("SocketIO not linked — cannot emit game state.")
+        logger.warning("SocketIO not linked – cannot emit game state.")
         return
 
     try:
@@ -157,74 +158,136 @@ def start_truth_dare_phase_handler(room_code):
 
 
 def _try_generate_ai_item(room, player, item_type):
+    """
+    Try to generate AI item with proper duplicate prevention.
+    
+    CRITICAL FIX: Keep original text separate from normalized text.
+    - Pass ORIGINAL text to AI for context
+    - Use NORMALIZED text for duplicate checking
+    """
     try:
+        # Debug logging
+        logger.info(f"🚨 AI GENERATION TRIGGERED - Player: {player.name}, Type: {item_type}, Round: {room.game_state.current_round}")
+        
+        # Track AI calls per game
+        if not hasattr(room, '_ai_call_count'):
+            room._ai_call_count = 0
+        room._ai_call_count += 1
+        logger.info(f"🚨 TOTAL AI CALLS THIS GAME: {room._ai_call_count}")
+        
         if not room.settings.get("ai_generation_enabled", False):
+            logger.info("AI generation is disabled in room settings")
             return False
 
         ai_gen = get_ai_generator()
         if not ai_gen.enabled:
+            logger.warning("AI generator not enabled")
             return False
 
-        norm = _clean_text
+        # ===== FIX #1: Separate ORIGINAL text from NORMALIZED text =====
+        
+        # Collect ORIGINAL text for AI context
         if item_type == "truth":
-            existing = set(map(norm, room.default_truths))
-            existing.update(map(norm, room.ai_generated_truths))
+            original_texts = list(room.default_truths)
+            original_texts.extend(room.ai_generated_truths)
         else:
-            existing = set(map(norm, room.default_dares))
-            existing.update(map(norm, room.ai_generated_dares))
-
-        # also include any extra normalized stuff
-        if hasattr(room, "_ai_generated_truths_normalized") and item_type == "truth":
-            existing.update(room._ai_generated_truths_normalized)
-        if hasattr(room, "_ai_generated_dares_normalized") and item_type == "dare":
-            existing.update(room._ai_generated_dares_normalized)
-
+            original_texts = list(room.default_dares)
+            original_texts.extend(room.ai_generated_dares)
+        
+        # Collect from all players (original text)
         for p in room.players:
             if item_type == "truth":
-                existing.update(map(norm, p.get_all_used_truths()))
-                existing.update(map(norm, [t.text for t in p.truth_dare_list.truths]))
+                original_texts.extend(p.get_all_used_truths())
+                original_texts.extend([t.text for t in p.truth_dare_list.truths])
             else:
-                existing.update(map(norm, p.get_all_used_dares()))
-                existing.update(map(norm, [d.text for d in p.truth_dare_list.dares]))
+                original_texts.extend(p.get_all_used_dares())
+                original_texts.extend([d.text for d in p.truth_dare_list.dares])
+        
+        # Build NORMALIZED set for duplicate checking (separate from originals)
+        existing_normalized = set(_clean_text(txt) for txt in original_texts)
+        
+        # Debug logging
+        logger.info(f"🔍 Total original items collected: {len(original_texts)}")
+        logger.info(f"🔍 First 3 originals: {original_texts[:3]}")
+        logger.info(f"🔍 Normalized set size: {len(existing_normalized)}")
+        logger.info(f"🔍 First 3 normalized: {list(existing_normalized)[:3]}")
 
-        # try a few times to get something unique from AI
-        for _ in range(5):
-            time.sleep(random.uniform(0.5, 1.5))
+        # ===== FIX #2: Reduce retry attempts from 5 to 3 =====
+        for attempt in range(3):  # Reduced from 5 to 3
+            logger.info(f"🔄 AI generation attempt {attempt + 1}/3")
+            
+            # ===== FIX #3: Exponential backoff instead of random delay =====
+            if attempt > 0:
+                # Exponential backoff: 2^attempt + small random jitter
+                delay = min(10, (2 ** attempt) + random.uniform(0, 1))
+                logger.info(f"⏱️ Waiting {delay:.2f}s before retry...")
+                time.sleep(delay)
+            else:
+                # Small initial delay to avoid hitting rate limits
+                time.sleep(random.uniform(0.3, 0.7))
 
-            seed_tag = f"SEED:{random.randint(1000,9999)}"
+            # Random seed to prevent cache collisions
+            unique_tag = f"SEED:{random.randint(1000, 9999)}"
+
             try:
                 with _ai_lock:
+                    logger.info(f"📡 Making API call to Gemini (attempt {attempt + 1}/3)...")
+                    
+                    # ===== CRITICAL: Pass ORIGINAL text to AI (limit to 30 for token management) =====
+                    context_items = original_texts[:30]
+                    
                     if item_type == "truth":
-                        res = ai_gen.generate_truth(list(existing) + [seed_tag])
+                        generated = ai_gen.generate_truth(context_items + [unique_tag])
                     else:
-                        res = ai_gen.generate_dare(list(existing) + [seed_tag])
-            except Exception as gen_err:
-                logger.error(f"AI generation error: {gen_err}")
+                        generated = ai_gen.generate_dare(context_items + [unique_tag])
+                    
+                    logger.info(f"✅ API call completed successfully")
+                    
+            except Exception as e:
+                logger.error(f"❌ AI generation API error on attempt {attempt + 1}: {e}", exc_info=True)
                 continue
 
-            if not res or _clean_text(res) in existing:
+            if not generated:
+                logger.warning(f"⚠️ AI returned empty result on attempt {attempt + 1}")
                 continue
 
+            logger.info(f"📝 Generated text: '{generated[:50]}...'")
+
+            # ===== Check for duplicate using NORMALIZED comparison =====
+            normalized_generated = _clean_text(generated)
+            
+            if normalized_generated in existing_normalized:
+                logger.warning(f"🔁 Duplicate detected (normalized): '{normalized_generated}' - attempt {attempt + 1}/3")
+                continue
+
+            # ===== Success - add to appropriate lists =====
+            logger.info(f"✨ SUCCESS - Unique {item_type} generated: '{generated}'")
+            
             if item_type == "truth":
-                if not room.add_ai_generated_truth(res):
+                if not room.add_ai_generated_truth(generated):
+                    logger.warning("⚠️ Room rejected AI truth (possible race condition)")
                     continue
-                player.truth_dare_list.add_truth(res, submitted_by="AI")
-                player.truth_dare_list.remove_truth_by_text(res)
-                player.mark_truth_used(res)
-                td = Truth(res, False, "AI")
+                    
+                new_item = Truth(generated, False, "AI")
+                player.truth_dare_list.add_truth(generated, submitted_by="AI")
+                player.truth_dare_list.remove_truth_by_text(generated)
+                player.mark_truth_used(generated)
             else:
-                if not room.add_ai_generated_dare(res):
+                if not room.add_ai_generated_dare(generated):
+                    logger.warning("⚠️ Room rejected AI dare (possible race condition)")
                     continue
-                player.truth_dare_list.add_dare(res, submitted_by="AI")
-                player.truth_dare_list.remove_dare_by_text(res)
-                player.mark_dare_used(res)
-                td = Dare(res, False, "AI")
+                    
+                new_item = Dare(generated, False, "AI")
+                player.truth_dare_list.add_dare(generated, submitted_by="AI")
+                player.truth_dare_list.remove_dare_by_text(generated)
+                player.mark_dare_used(generated)
 
-            room.game_state.set_current_truth_dare(td.to_dict())
-            logger.info(f"Generated new {item_type}: {res}")
+            room.game_state.set_current_truth_dare(new_item.to_dict())
+            logger.info(f"🎉 AI {item_type} successfully integrated into game")
             return True
 
-        logger.warning(f"AI failed to generate unique {item_type}")
+        # ===== All retries failed =====
+        logger.error(f"❌ AI GENERATION FAILED - No unique {item_type} after 3 attempts")
         room.game_state.list_empty = True
         room.game_state.set_current_truth_dare(
             {
@@ -235,8 +298,9 @@ def _try_generate_ai_item(room, player, item_type):
             }
         )
         return False
+        
     except Exception as e:
-        logger.exception(f"_try_generate_ai_item bombed: {e}")
+        logger.exception(f"💥 CRITICAL ERROR in _try_generate_ai_item: {e}")
         return False
 
 
